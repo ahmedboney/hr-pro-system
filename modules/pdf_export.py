@@ -10,7 +10,7 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, HRFlowable
 )
 
 import arabic_reshaper
@@ -502,12 +502,86 @@ def pdf_leave_certificate(leave):
     return buf.getvalue()
 
 
-# ==================== شهادة إجازة PDF ====================
+# ==================== شهادات رسمية فاخرة ====================
+
+def _cert_painter(company, watermark):
+    """رسام صفحات الشهادات: إطار مزدوج كحلي/ذهبي + علامة مائية + ترويسة داخلية"""
+    def draw(canvas, doc):
+        w, h = A4
+        canvas.saveState()
+        gold = colors.HexColor('#C9A227')
+        # إطار خارجي كحلي سميك
+        canvas.setStrokeColor(COLOR_HEADER)
+        canvas.setLineWidth(2.0)
+        canvas.rect(9 * mm, 9 * mm, w - 18 * mm, h - 18 * mm)
+        # إطار داخلي ذهبي رفيع
+        canvas.setStrokeColor(gold)
+        canvas.setLineWidth(0.9)
+        canvas.rect(12.5 * mm, 12.5 * mm, w - 25 * mm, h - 25 * mm)
+        # زوايا ذهبية
+        canvas.setFillColor(gold)
+        d = 2.2 * mm
+        for cx, cy in ((12.5 * mm, 12.5 * mm), (w - 12.5 * mm, 12.5 * mm),
+                       (12.5 * mm, h - 12.5 * mm), (w - 12.5 * mm, h - 12.5 * mm)):
+            canvas.circle(cx, cy, d, stroke=0, fill=1)
+        # علامة مائية
+        canvas.setFont('ArBd', 64)
+        canvas.setFillColor(colors.HexColor('#EDF1F8'))
+        canvas.saveState()
+        canvas.translate(w / 2, h / 2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, ar(watermark))
+        canvas.restoreState()
+        # ترويسة داخلية سفلى
+        canvas.setFont('Ar', 8)
+        canvas.setFillColor(colors.HexColor('#94A3B8'))
+        canvas.drawCentredString(w / 2, 16 * mm, ar(f"{company} - {watermark} - {date.today().year}"))
+        canvas.restoreState()
+    return draw
+
+
+def _ornament_block(color):
+    """زخرفة سطرية: خط رفيع + نقاط مزخرفة + خط رفيع"""
+    g = color
+    return [
+        HRFlowable(width='62%', thickness=1.0, color=g, hAlign='CENTER', spaceBefore=2, spaceAfter=0),
+        Paragraph(ar("◆ ◆ ◆"), _style('orn', 9, color=g, align=1)),
+        HRFlowable(width='62%', thickness=1.0, color=g, hAlign='CENTER', spaceAfter=2),
+    ]
+
+
+_GOLD = colors.HexColor('#B08D2F')
+_GOLD_BG = colors.HexColor('#FFFDF6')
+
+
+def _cert_sign_table(hr_full, other_full):
+    t = _table([
+        [ar(hr_full), ar(other_full)],
+        ["", ""],
+    ], col_widths=[83 * mm, 83 * mm], aligns=[1, 1])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_HEADER),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('LINEABOVE', (0, 1), (0, 1), 0.7, COLOR_HEADER),
+        ('LINEABOVE', (1, 1), (1, 1), 0.7, _GOLD),
+        ('TOPPADDING', (0, 1), (-1, 1), 12),
+    ]))
+    return t
+
+
+def _cert_doc(buf):
+    return SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=20 * mm, rightMargin=20 * mm,
+        topMargin=26 * mm, bottomMargin=24 * mm,
+        title="شهادة رسمية", author=_signers()[0],
+    )
+
 
 def pdf_experience_certificate(emp):
-    buf = BytesIO()
+    """شهادة خبرة رسمية فاخرة بإطار مزدوج وزخارف ذهبية"""
     company, currency = _init_common("شركتي", "شهادة خبرة")
-
     today = date.today()
     hire = emp.hire_date or today
     years = today.year - hire.year
@@ -518,52 +592,109 @@ def pdf_experience_certificate(emp):
     service = f"{years} سنة و{months} شهر" if years else f"{months} شهر"
 
     elements = []
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(ar(company), _style('t1', 16, True, COLOR_HEADER, 1)))
-    elements.append(Paragraph(ar("شهادة خبرة"), _style('t2', 13, True, colors.HexColor('#1E40AF'), 1)))
-    elements.append(Spacer(1, 8))
+    elements.append(Paragraph(ar(company), _style('cc', 16, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
+    elements.append(Paragraph(ar("شهادة خبرة"), _style('ct', 26, True, _GOLD, 1)))
+    elements.append(Paragraph(ar("CERTIFICATE OF EXPERIENCE"), _style('cen', 9, color=colors.HexColor('#94A3B8'), align=1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
+    elements.append(Spacer(1, 14))
 
-    body_table = Table([
-        [Paragraph(ar(f"تشهد شركة {company} بأن"), _style('b1', 11, align=1))],
-        [Paragraph(ar(emp.full_name), _style('name', 20, True, colors.HexColor('#1E3A8A'), align=1))],
-        [Paragraph(ar(
-            f"رقم قومي: {emp.national_id or '—'} - رقم وظيفي: {emp.emp_id} - "
-            f"القسم: {emp.department.name if emp.department else '—'}"),
-            _style('b2', 10, align=1))],
-        [Paragraph(ar(
-            f"يعمل بالشركة بوظيفة {emp.position.title if emp.position else '—'} منذ {ar_date(hire)} "
-            f"وحتى تاريخه، أي لمدة {service}، ويحصل على راتب شهري قدره {emp.total_salary:,.2f} {currency}."),
-            _style('b2', 11, align=1))],
-        [Paragraph(ar(
-            f"تمنح هذه الشهادة بناءً على طلبه دون أي مسئولية على الشركة، لاستخدامها فيما يراه مناسباً بأمانة."),
-            _style('b3', 10, align=1))],
-    ], colWidths=[150 * mm])
-    body_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 0.8, colors.HexColor('#1E3A8A')),
-        ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#CBD5E1')),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
+    elements.append(Paragraph(ar(f"تشهد شركة {company} بأن:"), _style('cb', 12.5, align=1)))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(ar(emp.full_name), _style('cn', 26, True, COLOR_HEADER, 1)))
+    elements.append(HRFlowable(width='45%', thickness=1.0, color=_GOLD, hAlign='CENTER'))
+    elements.append(Spacer(1, 4))
+    job = f"{emp.position.title if emp.position else 'موظف'} - {emp.department.name if emp.department else 'بالشركة'}"
+    elements.append(Paragraph(ar(job), _style('cj', 12, color=colors.HexColor('#475569'), align=1)))
+    elements.append(Spacer(1, 16))
+
+    body_txt = (
+        f"تعمل لدى الشركة بصفة {emp.position.title if emp.position else 'موظف'} منذ {ar_date(hire)} وحتى تاريخه، "
+        f"أي لمدة {service}، وتتقاضى راتباً شهرياً قدره {emp.total_salary:,.2f} {currency}. "
+        f"وقد كان سلوكه وسيرته داخل الشركة حسنين، وأداؤه في عمله متميزاً."
+    )
+    info = Table([[Paragraph(ar(body_txt), _style('cb2', 12.5, align=1))]], colWidths=[150 * mm])
+    info.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), _GOLD_BG),
+        ('BOX', (0, 0), (-1, -1), 0.9, _GOLD),
+        ('TOPPADDING', (0, 0), (-1, -1), 16),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 16),
+        ('LEFTPADDING', (0, 0), (-1, -1), 18),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 18),
     ]))
-    elements.append(body_table)
-    elements.append(Spacer(1, 8))
-    elements.append(Paragraph(ar(f"تحريراً في: {ar_date(today)}"), _style('b4', 10, align=1)))
+    elements.append(info)
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(ar(
+        "تمنحه هذه الشهادة بناءً على طلبه دون أي مسئولية على الشركة، لاستخدامها فيما يراه مناسباً وبأمانة."
+    ), _style('cc2', 10, color=colors.HexColor('#64748B'), align=1)))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(
+        ar(f"الرقم الوظيفي: {emp.emp_id}     |     تحريراً في: {ar_date(today)}"),
+        _style('cc3', 11, align=1)))
     elements.append(Spacer(1, 18))
 
     fin_full, hr_full = _signers()
-    sign = [
-        [ar(hr_full), ar("ختم الشركة")],
-        [ar(""), ar("")],
-    ]
-    t = _table(sign, col_widths=[83 * mm, 83 * mm], aligns=[1, 1])
-    t.setStyle(TableStyle([('LINEABOVE', (0, 1), (0, 1), 0.6, COLOR_LINE),
-                           ('LINEABOVE', (1, 1), (1, 1), 0.6, COLOR_LINE),
-                           ('TOPPADDING', (0, 1), (-1, 1), 12)]))
-    elements.append(t)
+    elements.append(_cert_sign_table(hr_full, "ختم الشركة"))
 
-    doc = _base_doc(buf)
-    doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),
-              onLaterPages=lambda c, d: _footer(c, d, company))
+    buf = BytesIO()
+    doc = _cert_doc(buf)
+    painter = _cert_painter(company, "شهادة خبرة")
+    doc.build(elements, onFirstPage=painter, onLaterPages=painter)
+    return buf.getvalue()
+
+
+def pdf_appreciation_certificate(emp, reason, issued_on=None):
+    """شهادة تقدير رسمية فاخرة (تكريم للموظف على عمل متميز)"""
+    company, currency = _init_common("شركتي", "شهادة تقدير")
+    issued_on = issued_on or date.today()
+    if isinstance(issued_on, datetime):
+        issued_on = issued_on.date()
+    reason = reason or "تقديراً لجهوده المتميزة وتفانيه في العمل خلال فترة عمله بالشركة"
+
+    elements = []
+    elements.append(Paragraph(ar(company), _style('cc', 16, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
+    elements.append(Paragraph(ar("شهادة تقدير"), _style('ct', 26, True, _GOLD, 1)))
+    elements.append(Paragraph(ar("CERTIFICATE OF APPRECIATION"), _style('cen', 9, color=colors.HexColor('#94A3B8'), align=1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
+    elements.append(Spacer(1, 14))
+
+    elements.append(Paragraph(ar("يُشهد بهذا أن:"), _style('cb', 12.5, align=1)))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(ar(emp.full_name), _style('cn', 26, True, COLOR_HEADER, 1)))
+    elements.append(HRFlowable(width='45%', thickness=1.0, color=_GOLD, hAlign='CENTER'))
+    elements.append(Spacer(1, 4))
+    job = f"{emp.position.title if emp.position else 'موظف'} - {emp.department.name if emp.department else 'بالشركة'}"
+    elements.append(Paragraph(ar(job), _style('cj', 12, color=colors.HexColor('#475569'), align=1)))
+    elements.append(Spacer(1, 16))
+
+    body_txt = (
+        f"{reason}، فقد أثبت كفاءة عالية وأمانة فائقة في أداء مهامه الوظيفية، "
+        f"وكان مثالاً يحتذى به في الالتزام والتفاني، لذا تستحق منا كل الشكر والتقدير."
+    )
+    info = Table([[Paragraph(ar(body_txt), _style('cb2', 12.5, align=1))]], colWidths=[150 * mm])
+    info.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), _GOLD_BG),
+        ('BOX', (0, 0), (-1, -1), 0.9, _GOLD),
+        ('TOPPADDING', (0, 0), (-1, -1), 16),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 16),
+        ('LEFTPADDING', (0, 0), (-1, -1), 18),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 18),
+    ]))
+    elements.append(info)
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(
+        ar(f"الرقم الوظيفي: {emp.emp_id}     |     تاريخ الإصدار: {ar_date(issued_on)}"),
+        _style('cc3', 11, align=1)))
+    elements.append(Spacer(1, 18))
+
+    fin_full, hr_full = _signers()
+    elements.append(_cert_sign_table(hr_full, fin_full))
+
+    buf = BytesIO()
+    doc = _cert_doc(buf)
+    painter = _cert_painter(company, "شهادة تقدير")
+    doc.build(elements, onFirstPage=painter, onLaterPages=painter)
     return buf.getvalue()
 
 

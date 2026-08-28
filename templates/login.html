@@ -59,9 +59,57 @@
         .demo-box code { background: #fef3c7; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
         .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #94a3b8; line-height: 1.7; border-top: 1px solid #eef2f7; padding-top: 14px; }
         .footer a { color: #1e3a8a; text-decoration: none; font-weight: 700; }
+        .theme-toggle-wrap { position: fixed; top: 18px; left: 18px; }
+        .theme-toggle {
+            background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.25);
+            border-radius: 10px; padding: 8px 12px; cursor: pointer; font-family: inherit;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,.22); }
+        html[data-theme="dark"] .login-box { background: #101a2e; }
+        html[data-theme="dark"] .login-box .brand h1 { color: #93c5fd; }
+        html[data-theme="dark"] .login-box .brand p { color: #8ea2c0; }
+        html[data-theme="dark"] .login-box .form-group label { color: #c6d2e8; }
+        html[data-theme="dark"] .login-box .form-group input { background: #0c1526; color: #e6ecf5; border-color: #25314b; }
+        html[data-theme="dark"] .login-box .form-group input:focus { border-color: #2563eb; background: #0c1526; }
+        html[data-theme="dark"] .login-box .flash { background: rgba(220,38,38,.16); color: #f87171; border-color: rgba(220,38,38,.3); }
+        html[data-theme="dark"] .login-box .demo-box { background: rgba(217,119,6,.14); border-color: rgba(217,119,6,.4); color: #fbbf24; }
+        html[data-theme="dark"] .login-box .demo-box b, html[data-theme="dark"] .login-box .demo-box code { color: #fbd38d; }
+        html[data-theme="dark"] .login-box .footer { color: #64748b; border-top-color: #25314b; }
+        html[data-theme="dark"] .login-box .footer a { color: #93c5fd; }
     </style>
 </head>
 <body>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('hr-theme') === 'dark' || (localStorage.getItem('hr-theme') !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
+    <div class="theme-toggle-wrap">
+        <button class="theme-toggle" id="login-theme-toggle" title="تبديل المظهر"><i class="fas fa-moon"></i></button>
+    </div>
+    <script>
+        (function () {
+            var btn = document.getElementById('login-theme-toggle');
+            if (!btn) return;
+            var icon = btn.querySelector('i');
+            function sync() {
+                var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+            btn.addEventListener('click', function () {
+                var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                if (dark) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('hr-theme', 'light'); }
+                else { document.documentElement.setAttribute('data-theme', 'dark'); localStorage.setItem('hr-theme', 'dark'); }
+                sync();
+            });
+            sync();
+        })();
+    </script>
     <div class="login-box">
         <div class="brand">
             <div class="brand-logo"><i class="fas fa-fingerprint" style="vertical-align:middle;"></i></div>
@@ -93,6 +141,11 @@
             <b>حساب تجريبي:</b> هذا موقع تجريبي — استخدم
             <code>demo</code> / <code>demo1234</code>
             <br>بيانات المعاينة تُعاد ضبطها تلقائياً كل يوم.
+        </div>
+        {% else %}
+        <div class="demo-box" style="background:#eff6ff; border-color:#3b82f6; color:#1e3a8a;">
+            <b>حسابات افتراضية محلية:</b>
+            <code>admin</code> / <code>admin123</code> (مدير) و <code>hr</code> / <code>hr123</code> — يمكن تغييرها من قسم المستخدمين.
         </div>
         {% endif %}
 

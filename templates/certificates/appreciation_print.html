@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>شهادة تقدير - {{ emp.full_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; background: #f1f5f9; padding: 24px; }
+        .toolbar { max-width: 800px; margin: 0 auto 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .toolbar a, .toolbar button {
+            padding: 10px 18px; border-radius: 8px; border: none; font-family: inherit;
+            font-size: 14px; cursor: pointer; text-decoration: none; display: inline-flex;
+            align-items: center; gap: 8px; font-weight: 700;
+        }
+        .btn-back { background: #64748b; color: #fff; }
+        .btn-print { background: #1e3a8a; color: #fff; }
+        .btn-pdf { background: #dc2626; color: #fff; }
+        .certificate {
+            max-width: 800px; margin: 0 auto; background: #fff; padding: 44px 56px;
+            border: 2px solid #1e3a8a; border-radius: 4px; position: relative;
+            box-shadow: 0 4px 24px rgba(176, 141, 47, 0.12);
+        }
+        .certificate::before { content: ""; position: absolute; inset: 8px; border: 1px solid #c9a227; border-radius: 2px; pointer-events: none; }
+        .cert-header { text-align: center; margin-bottom: 10px; color: #c9a227; font-size: 13px; letter-spacing: 2px; }
+        .cert-orn { text-align: center; color: #c9a227; font-size: 12px; margin: 4px 0; }
+        .cert-title { text-align: center; font-size: 26px; font-weight: 800; color: #c9a227; margin-bottom: 2px; }
+        .cert-sub { text-align: center; font-size: 11px; color: #94a3b8; margin-bottom: 14px; }
+        .cert-name { text-align: center; font-size: 30px; font-weight: 800; color: #1e3a8a; margin: 10px 0 6px;
+            border-bottom: 1px solid #c9a227; padding-bottom: 8px; display: inline-block; }
+        .name-wrap { text-align: center; }
+        .cert-role { text-align: center; font-size: 13px; color: #475569; margin-bottom: 20px; }
+        .cert-body { text-align: center; font-size: 15.5px; line-height: 2.2; color: #1e293b; background: #fffdf6;
+            border: 1px solid #c9a227; border-radius: 6px; padding: 22px 26px; margin-top: 14px; }
+        .cert-body b { color: #0f172a; }
+        .cert-date { text-align: center; font-size: 13px; color: #475569; margin-top: 22px; }
+        .sign-wrap { display: flex; justify-content: space-between; margin-top: 48px; padding: 0 16px; }
+        .sign-box { text-align: center; width: 45%; }
+        .sign-box .name { font-weight: 800; font-size: 14px; color: #1e293b; border-top: 1px solid #94a3b8; padding-top: 10px; }
+        .footer-note { max-width: 800px; margin: 16px auto 0; text-align: center; font-size: 11px; color: #64748b; }
+        @media print { body { background: #fff; padding: 0; } .toolbar { display: none; } .certificate { box-shadow: none; border-radius: 0; } }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="javascript:history.length ? history.go(-1) : window.location='/' " class="btn-back"><i class="fas fa-arrow-right"></i> رجوع</a>
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
+        <a href="?pdf=1{% if reason %}&reason={{ reason|urlencode }}{% endif %}{% if issued_on %}&date={{ issued_on.isoformat() }}{% endif %}" class="btn-pdf"><i class="fas fa-file-pdf"></i> حفظ PDF</a>
+    </div>
+
+    {% set months_ar = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'] %}
+    {% set issue_date = issued_on or today %}
+
+    <div class="certificate">
+        <div class="cert-header">{{ get_company_name() }}</div>
+        <div class="cert-orn">◆ ◆ ◆</div>
+        <h1 class="cert-title">شهادة تقدير</h1>
+        <div class="cert-sub">CERTIFICATE OF APPRECIATION</div>
+        <div class="cert-orn">◆ ◆ ◆</div>
+
+        <div class="cert-body">
+            <p style="margin-top:6px;">يُشهد بهذا أن</p>
+            <div class="name-wrap"><span class="cert-name">{{ emp.full_name }}</span></div>
+            <div class="cert-role">{{ emp.position.title if emp.position else 'موظف' }}{% if emp.department %} - {{ emp.department.name }}{% endif %}</div>
+            <p>
+                {{ reason or 'تقديراً لجهوده المتميزة وتفانيه في العمل خلال فترة عمله بالشركة' }}،
+                فقد أثبت كفاءة عالية وأمانة فائقة في أداء مهامه الوظيفية، وكان مثالاً يحتذى به في الالتزام والتفاني،
+                لذا تستحق منا كل الشكر والتقدير.
+            </p>
+        </div>
+
+        <div class="cert-date">
+            الرقم الوظيفي: {{ emp.emp_id }} &nbsp;&nbsp;|&nbsp;&nbsp;
+            تاريخ الإصدار: {{ issue_date.day }} {{ months_ar[issue_date.month - 1] }} {{ issue_date.year }}
+        </div>
+
+        <div class="sign-wrap">
+            <div class="sign-box"><div class="name">{{ setting('sign_hr_role') or 'مدير الموارد البشرية' }}{% if setting('sign_hr_name') %} / {{ setting('sign_hr_name') }}{% endif %}</div></div>
+            <div class="sign-box"><div class="name">ختم الشركة</div></div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        صادر آلياً من نظام الموارد البشرية المتكامل - حقوق الملكية محفوظة © {{ today.year }} - {% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}
+    </div>
+</body>
+</html>

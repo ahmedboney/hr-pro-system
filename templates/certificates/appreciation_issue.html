@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}إصدار شهادة تقدير - {{ emp.full_name }}{% endblock %}
+{% block page_title %}شهادة التقدير{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-16">
+    <div>
+        <h3 style="font-size:18px; font-weight:800;">إصدار شهادة تقدير للموظف: {{ emp.full_name }} ({{ emp.emp_id }})</h3>
+        <p class="muted small">حدّد سبب التقدير وتاريخ الإصدار، ثم اعرض الشهادة أو حمّلها PDF فوراً.</p>
+    </div>
+    <a href="{{ url_for('employee_view', emp_id=emp.id) }}" class="btn btn-outline btn-sm"><i class="fas fa-arrow-right"></i> عودة للملف</a>
+</div>
+
+<form method="POST" class="card">
+    <div class="card-body">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>الموظف</label>
+                <input type="text" class="form-control" value="{{ emp.full_name }} - {{ emp.position.title if emp.position else '' }}" disabled>
+            </div>
+            <div class="form-group">
+                <label>تاريخ الإصدار</label>
+                <input type="date" class="form-control" name="issue_date" value="{{ today.isoformat() if today else '' }}">
+            </div>
+        </div>
+        <div class="form-group mt-16">
+            <label>سبب التقدير / نص التكريم <span class="required">*</span></label>
+            <textarea class="form-control" name="reason" rows="4" required placeholder="تقديراً لجهوده المتميزة وتفانيه في العمل خلال فترة عمله بالشركة..."></textarea>
+            <div class="form-help">سيُدخل هذا النص كاملاً في صلب الشهادة بعد اسم الموظف مع عبارة ختامية تلقائية.</div>
+        </div>
+        <div class="flex gap-12 mt-16">
+            <button class="btn btn-primary" style="color:#fff;"><i class="fas fa-eye"></i> عرض الشهادة</button>
+            <button class="btn btn-danger" name="direct_pdf" value="1"><i class="fas fa-file-pdf"></i> تحميل PDF مباشر</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

@@ -21,6 +21,7 @@
     </div>
     <div class="actions">
         <a href="{{ url_for('certificate_experience', emp_id=emp.id) }}" class="btn btn-outline"><i class="fas fa-award"></i> شهادة خبرة</a>
+        <a href="{{ url_for('appreciation_issue', emp_id=emp.id) }}" class="btn btn-outline"><i class="fas fa-medal"></i> شهادة تقدير</a>
         <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-outline"><i class="fas fa-edit"></i> تعديل البيانات</a>
         <a href="#" class="btn btn-danger" onclick="if(confirm('هل أنت متأكد من إنهاء خدمة {{ emp.full_name }}؟')){ document.getElementById('term-form').submit(); }"><i class="fas fa-user-minus"></i> إنهاء الخدمة</a>
         <form id="term-form" method="POST" action="{{ url_for('employee_delete', emp_id=emp.id) }}" style="display:none;"></form>

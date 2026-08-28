@@ -1512,3 +1512,133 @@ body.no-scroll {
 .mb-8 { margin-bottom: 8px; }
 .mb-16 { margin-bottom: 16px; }
 .mb-24 { margin-bottom: 24px; }
+
+.logout-btn:hover,
+.logout-btn:focus {
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+    background: var(--danger-bg) !important;
+}
+
+/* ==================== Dark Mode ==================== */
+
+html[data-theme="dark"] {
+    --primary: #6ba3ff;
+    --primary-dark: #4f8bff;
+    --primary-light: #93c5fd;
+    --primary-bg: rgba(37, 99, 235, 0.16);
+    --success: #34d399;
+    --success-bg: rgba(22, 163, 74, 0.16);
+    --warning: #fbbf24;
+    --warning-bg: rgba(217, 119, 6, 0.16);
+    --danger: #f87171;
+    --danger-bg: rgba(220, 38, 38, 0.16);
+    --info: #22d3ee;
+    --info-bg: rgba(8, 145, 178, 0.16);
+    --purple: #a78bfa;
+    --purple-bg: rgba(124, 58, 237, 0.16);
+    --dark: #0d1526;
+    --dark-2: #182338;
+    --dark-3: #243349;
+    --light: #0d1526;
+    --light-2: #182338;
+    --border: #25314b;
+    --text: #e6ecf5;
+    --text-2: #aebbd0;
+    --text-3: #6b7c99;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] body {
+    background: #0d1526;
+    color: var(--text);
+}
+
+html[data-theme="dark"] .sidebar {
+    background: linear-gradient(180deg, #0d1526 0%, #152238 100%);
+}
+
+html[data-theme="dark"] .topbar {
+    background: #101a2e;
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .filter-bar,
+html[data-theme="dark"] .login-card,
+html[data-theme="dark"] .modal {
+    background: #101a2e;
+}
+
+html[data-theme="dark"] .login-page,
+html[data-theme="dark"] .login-page .login-wrapper {
+    background: #0a1120;
+}
+
+html[data-theme="dark"] .form-control {
+    background: #0c1526;
+    color: var(--text);
+}
+
+html[data-theme="dark"] select.form-control {
+    color: var(--text);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: var(--text-3);
+}
+
+html[data-theme="dark"] tbody tr:hover {
+    background: rgba(37, 99, 235, 0.12);
+}
+
+html[data-theme="dark"] .stat-value,
+html[data-theme="dark"] .emp-cell .emp-name,
+html[data-theme="dark"] .table-title h2 {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .tab.active {
+    background: #101a2e;
+}
+
+html[data-theme="dark"] .bg-light {
+    background: #101a2e;
+}
+
+html[data-theme="dark"] .flash.success { background: var(--success-bg); color: var(--success); }
+html[data-theme="dark"] .flash.danger { background: var(--danger-bg); color: var(--danger); }
+html[data-theme="dark"] .flash.warning { background: var(--warning-bg); color: var(--warning); }
+html[data-theme="dark"] .flash.info { background: var(--info-bg); color: var(--info); }
+
+html[data-theme="dark"] .modal-overlay {
+    background: rgba(5, 10, 22, 0.7);
+}
+
+html[data-theme="dark"] .sidebar-overlay {
+    background: rgba(5, 10, 22, 0.6);
+}
+
+html[data-theme="dark"] .page-title,
+html[data-theme="dark"] .section-title,
+html[data-theme="dark"] .card-header h3 {
+    color: var(--text);
+}
+
+html[data-theme="dark"] .theme-toggle-active { background: var(--primary-bg); }
+
+@media print {
+    html[data-theme="dark"] body,
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .filter-bar {
+        background: #fff;
+        color: #1e293b;
+    }
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .stat-card {
+        border: none;
+    }
+}

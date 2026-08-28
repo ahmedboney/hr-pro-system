@@ -41,8 +41,11 @@ DEMO_MODE = bool(getattr(Config, 'DEMO_MODE', False))
 
 def auto_login():
     """تسجيل دخول تلقائي (بدون صفحة دخول) بصلاحيات مدير النظام.
-    لا يعمل في وضع DEMO_MODE حيث يُطلب تسجيل دخول حقيقي."""
+    لا يعمل في وضع DEMO_MODE حيث يُطلب تسجيل دخول حقيقي.
+    كما لا يعمل مباشرة بعد «تسجيل الخروج» حتى يتمكن المستخدم من الدخول ببياناته."""
     if DEMO_MODE:
+        return
+    if session.get('_just_logged_out'):
         return
     if not session.get('user_id'):
         user = User.query.filter_by(role='admin').first() or User.query.first()
@@ -56,6 +59,8 @@ def _ensure_auth(role=None):
     """تأمين الوصول للصفحات: في الوضع العادي دخول تلقائي، وفي الديمو تحقق من الجلسة والصلاحية."""
     if not DEMO_MODE:
         auto_login()
+        if not session.get('user_id'):
+            return redirect(url_for('login'))
         return None
     uid = session.get('user_id')
     user = User.query.get(uid) if uid else None
@@ -274,45 +279,48 @@ app.jinja_env.globals['setting'] = lambda key, default=None: Setting.get(key, de
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if not DEMO_MODE:
-        auto_login()
-        return redirect(url_for('dashboard'))
+        if not session.get('_just_logged_out'):
+            auto_login()
+            return redirect(url_for('dashboard'))
+        if request.method == 'POST':
+            return _do_login()
+        return render_template('login.html', demo_credentials=False)
 
     ensure_demo_account()
-
     if request.method == 'POST':
-        ip = request.remote_addr or '0.0.0.0'
-        if rate_limited(_login_attempts, ip, 8, 600):
-            flash('محاولات دخول كثيرة. انتظر 10 دقائق ثم حاول مرة أخرى.', 'danger')
-            return redirect(url_for('login'))
-
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        user = User.query.filter_by(username=username).first()
-        if user and user.is_active and user.check_password(password):
-            session.clear()
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['role'] = user.role
-            session['_csrf_token'] = csrf_token()
-            _login_attempts.pop(ip, None)
-            return redirect(url_for('dashboard'))
-
-        if user and not user.is_active:
-            flash('هذا الحساب موقوف', 'danger')
-        else:
-            flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
-        return redirect(url_for('login'))
-
+        return _do_login()
     return render_template('login.html', demo_credentials=True)
+
+
+def _do_login():
+    """معالجة نموذج تسجيل الدخول (بيانات المستخدم الصحيحة أو الرسالة المناسبة)"""
+    ip = request.remote_addr or '0.0.0.0'
+    if rate_limited(_login_attempts, ip, 8, 600):
+        flash('محاولات دخول كثيرة. انتظر 10 دقائق ثم حاول مرة أخرى.', 'danger')
+        return redirect(url_for('login'))
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+    user = User.query.filter_by(username=username).first()
+    if user and user.is_active and user.check_password(password):
+        session.clear()
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
+        session['_csrf_token'] = csrf_token()
+        _login_attempts.pop(ip, None)
+        return redirect(url_for('dashboard'))
+    if user and not user.is_active:
+        flash('هذا الحساب موقوف', 'danger')
+    else:
+        flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
+    return redirect(url_for('login'))
 
 
 @app.route('/logout')
 def logout():
     session.clear()
-    if DEMO_MODE:
-        return redirect(url_for('login'))
-    auto_login()
-    return redirect(url_for('dashboard'))
+    session['_just_logged_out'] = True
+    return redirect(url_for('login'))
 
 
 # ==================== Dashboard ====================
@@ -1091,6 +1099,57 @@ def certificate_experience(emp_id):
 
     signed = request.args.get('signed')
     return render_template('certificates/experience_print.html', emp=emp, signed=signed)
+
+
+@app.route('/certificates/appreciation/issue/<int:emp_id>', methods=['GET', 'POST'])
+@login_required
+def appreciation_issue(emp_id):
+    """صفحة إصدار شهادة تقدير"""
+    emp = Employee.query.get_or_404(emp_id)
+    if request.method == 'POST':
+        reason = (request.form.get('reason') or '').strip()
+        date_str = (request.form.get('issue_date') or '').strip()
+        issued_on = None
+        if date_str:
+            try:
+                issued_on = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                issued_on = None
+        if request.form.get('direct_pdf'):
+            data = pdf_export.pdf_appreciation_certificate(emp, reason, issued_on)
+            return send_pdf(data, f"شهادة_تقدير_{emp.full_name.replace(' ', '_')}.pdf")
+        args = {'emp_id': emp_id}
+        if reason:
+            args['reason'] = reason
+        if date_str:
+            args['date'] = date_str
+        return redirect(url_for('certificate_appreciation', **args))
+    return render_template('certificates/appreciation_issue.html', emp=emp)
+
+
+@app.route('/certificates/appreciation/<int:emp_id>')
+@login_required
+def certificate_appreciation(emp_id):
+    """شهادة تقدير رسمية - عرض للطباعة أو PDF"""
+    emp = Employee.query.get_or_404(emp_id)
+    reason = request.args.get('reason', '')
+    date_str = request.args.get('date') or ''
+    issued_on = None
+    if date_str:
+        try:
+            issued_on = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            issued_on = None
+
+    def save_pdf():
+        data = pdf_export.pdf_appreciation_certificate(emp, reason, issued_on)
+        return send_pdf(data, f"شهادة_تقدير_{emp.full_name.replace(' ', '_')}.pdf")
+
+    if request.args.get('pdf'):
+        return save_pdf()
+
+    return render_template('certificates/appreciation_print.html', emp=emp,
+                           reason=reason, issued_on=issued_on)
 
 
 # ==================== Insurance & Tax Report ====================

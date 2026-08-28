@@ -51,6 +51,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+// Dark mode toggle
+(function () {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const root = document.documentElement;
+    function sync() {
+        const dark = root.getAttribute('data-theme') === 'dark';
+        icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+        btn.classList.toggle('theme-toggle-active', dark);
+    }
+    btn.addEventListener('click', function () {
+        const dark = root.getAttribute('data-theme') === 'dark';
+        if (dark) {
+            root.removeAttribute('data-theme');
+            localStorage.setItem('hr-theme', 'light');
+        } else {
+            root.setAttribute('data-theme', 'dark');
+            localStorage.setItem('hr-theme', 'dark');
+        }
+        sync();
+    });
+    sync();
+})();
+
 // Modal helpers
 function openModal(id) {
     document.getElementById(id).classList.add('show');
