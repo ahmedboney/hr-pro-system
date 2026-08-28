@@ -42,17 +42,30 @@ DEMO_MODE = bool(getattr(Config, 'DEMO_MODE', False))
 def auto_login():
     """تسجيل دخول تلقائي (بدون صفحة دخول) بصلاحيات مدير النظام.
     لا يعمل في وضع DEMO_MODE حيث يُطلب تسجيل دخول حقيقي.
-    كما لا يعمل مباشرة بعد «تسجيل الخروج» حتى يتمكن المستخدم من الدخول ببياناته."""
+    كما لا يعمل مباشرة بعد «تسجيل الخروج» حتى يتمكن المستخدم من الدخول ببياناته.
+    الأمان: الدخول التلقائي يكون فقط من نفس الجهاز (localhost) ما لم تُفعَّل
+    AUTO_LOGIN=all (كل الشبكة) أو AUTO_LOGIN=lan (كل الأجهزة الداخلية) في المتغيرات."""
     if DEMO_MODE:
         return
     if session.get('_just_logged_out'):
         return
-    if not session.get('user_id'):
-        user = User.query.filter_by(role='admin').first() or User.query.first()
-        if user:
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['role'] = user.role
+    if session.get('user_id'):
+        return
+    mode = os.environ.get('AUTO_LOGIN', 'local').strip().lower()
+    if mode in ('1', 'true', 'all'):
+        pass
+    else:
+        ip = request.remote_addr or ''
+        if mode == 'lan':
+            if ip in ('127.0.0.1', '::1'):
+                return
+        elif ip not in ('127.0.0.1', '::1'):
+            return
+    user = User.query.filter_by(role='admin').first() or User.query.first()
+    if user:
+        session['user_id'] = user.id
+        session['username'] = user.username
+        session['role'] = user.role
 
 
 def _ensure_auth(role=None):
@@ -281,7 +294,8 @@ def login():
     if not DEMO_MODE:
         if not session.get('_just_logged_out'):
             auto_login()
-            return redirect(url_for('dashboard'))
+            if session.get('user_id'):
+                return redirect(url_for('dashboard'))
         if request.method == 'POST':
             return _do_login()
         return render_template('login.html', demo_credentials=False)
