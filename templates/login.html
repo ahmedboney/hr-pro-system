@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | نظام الموارد البشرية المتكامل</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f2441 0%, #1e3a8a 55%, #2563eb 100%);
+            padding: 20px;
+        }
+        .login-box {
+            background: #fff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        }
+        .brand { text-align: center; margin-bottom: 24px; }
+        .brand-logo {
+            width: 64px; height: 64px; margin: 0 auto 12px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            color: #fbbf24; font-size: 28px;
+            box-shadow: 0 8px 20px rgba(30,58,138,.35);
+        }
+        .brand h1 { font-size: 20px; color: #1e3a8a; font-weight: 800; }
+        .brand p { font-size: 13px; color: #64748b; margin-top: 4px; }
+        .flash { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            font-family: inherit; font-size: 14px; background: #f8fafc; transition: border .2s;
+        }
+        .form-group input:focus { outline: none; border-color: #1e3a8a; background: #fff; }
+        .btn-login {
+            width: 100%; padding: 13px; border: none; border-radius: 10px; cursor: pointer;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff;
+            font-family: inherit; font-size: 15px; font-weight: 800; margin-top: 4px;
+        }
+        .btn-login:hover { opacity: .93; }
+        .demo-box {
+            margin-top: 20px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 10px;
+            padding: 12px 14px; font-size: 13px; color: #92400e;
+        }
+        .demo-box b { color: #92400e; }
+        .demo-box code { background: #fef3c7; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #94a3b8; line-height: 1.7; border-top: 1px solid #eef2f7; padding-top: 14px; }
+        .footer a { color: #1e3a8a; text-decoration: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="brand">
+            <div class="brand-logo"><i class="fas fa-fingerprint" style="vertical-align:middle;"></i></div>
+            <h1>HR Pro System</h1>
+            <p>نظام الموارد البشرية المتكامل</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label>اسم المستخدم</label>
+                <input type="text" name="username" required autofocus autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-login"><i class="fas fa-right-to-bracket"></i> تسجيل الدخول</button>
+        </form>
+
+        {% if demo_credentials %}
+        <div class="demo-box">
+            <b>حساب تجريبي:</b> هذا موقع تجريبي — استخدم
+            <code>demo</code> / <code>demo1234</code>
+            <br>بيانات المعاينة تُعاد ضبطها تلقائياً كل يوم.
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            نظام مجاني لوجه الله &#183; حقوق الملكية محفوظة
+            <a href="{{ url_for('guide') }}">دليل الاستخدام</a>
+        </div>
+    </div>
+
+</body>
+</html>

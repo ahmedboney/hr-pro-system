@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="card mb-24" style="background: linear-gradient(135deg, var(--dark), var(--primary-dark)); border: none;">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; color: #fff;">
+        <div>
+            <h2 style="font-size: 18px; font-weight: 800;">أهلاً بك في {{ get_company_name() }}</h2>
+            <p style="font-size: 13px; opacity: 0.75; margin-top: 4px;">
+                نظام الحضور والانصراف وإدارة الموارد البشرية المتكامل - اليوم هو {{ today.strftime('%A، %d %B %Y') }}
+            </p>
+        </div>
+        <a href="{{ url_for('guide') }}" class="btn btn-light" style="background:#fff; color:var(--primary-dark); font-weight:800;">
+            <i class="fas fa-book-open"></i> دليل الاستخدام
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-4">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-primary"><i class="fas fa-users"></i></div>
+        <div class="stat-value">{{ stats.total_employees }}</div>
+        <div class="stat-label">إجمالي الموظفين</div>
+        <div class="stat-trend"><i class="fas fa-building"></i> {{ stats.total_departments }} أقسام</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-user-check"></i></div>
+        <div class="stat-value">{{ stats.present_today }}</div>
+        <div class="stat-label">حاضر اليوم</div>
+        <div class="stat-trend"><i class="fas fa-clock"></i> توقيع منذ الساعة 8:00</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-user-clock"></i></div>
+        <div class="stat-value">{{ stats.late_today }}</div>
+        <div class="stat-label">متأخر اليوم</div>
+        <div class="stat-trend"><i class="fas fa-exclamation-triangle"></i> وردية متأخرة</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-danger"><i class="fas fa-user-times"></i></div>
+        <div class="stat-value">{{ stats.absent_today }}</div>
+        <div class="stat-label">غائب اليوم</div>
+        <div class="stat-trend"><i class="fas fa-plane-departure"></i> {{ stats.on_leave_today }} في إجازة</div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-clipboard-list" style="color:var(--primary); margin-left:8px;"></i>حضور اليوم</h3>
+            <a href="{{ url_for('attendance_list') }}" class="btn btn-outline btn-sm">عرض الكل</a>
+        </div>
+        <div class="card-body">
+            {% if recent_attendance %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الموظف</th>
+                            <th>الحضور</th>
+                            <th>الانصراف</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent_attendance %}
+                        <tr>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="emp-avatar">{{ r.employee.first_name[0] }}{{ r.employee.last_name[0] if r.employee.last_name else '' }}</div>
+                                    <div>
+                                        <div class="emp-name">{{ r.employee.full_name }}</div>
+                                        <div class="emp-id">{{ r.employee.emp_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ r.check_in_time.strftime('%I:%M %p') if r.check_in_time else '—' }}</td>
+                            <td>{{ r.check_out_time.strftime('%I:%M %p') if r.check_out_time else '—' }}</td>
+                            <td>
+                                {% if r.status == 'present' %}<span class="badge badge-success"><i class="fas fa-check-circle"></i> حاضر</span>
+                                {% elif r.status == 'late' %}<span class="badge badge-warning"><i class="fas fa-clock"></i> متأخر</span>
+                                {% elif r.status == 'absent' %}<span class="badge badge-danger"><i class="fas fa-times-circle"></i> غائب</span>
+                                {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-fingerprint"></i>
+                <h4>لا توجد بيانات حضور لليوم</h4>
+                <p>سيظهر الموظفون هنا فور تسجيل بصماتهم</p>
+                <a href="{{ url_for('attendance_list') }}" class="btn btn-primary btn-sm mt-16">تسجيل حضور يدوي</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-paper-plane" style="color:var(--warning); margin-left:8px;"></i>طلبات الإجازات المعلقة</h3>
+            <a href="{{ url_for('leaves_list') }}" class="btn btn-outline btn-sm">عرض الكل</a>
+        </div>
+        <div class="card-body" style="padding-top: 0;">
+            {% if pending_requests %}
+            <ul class="activity-list">
+                {% for req in pending_requests %}
+                <li>
+                    <div class="activity-icon a-warning"><i class="fas fa-paper-plane"></i></div>
+                    <div class="activity-info">
+                        <div class="title">{{ req.employee.full_name }}</div>
+                        <div class="desc">
+                            {{ req.leave_type.name }} —
+                            {{ req.start_date.strftime('%d/%m') }} إلى {{ req.end_date.strftime('%d/%m') }}
+                            ({{ req.days_count }} يوم)
+                        </div>
+                    </div>
+                    <a href="{{ url_for('leave_action', req_id=req.id) }}" class="btn btn-sm btn-success" onclick="event.preventDefault(); document.getElementById('quick-approve-{{ req.id }}').submit();">
+                        موافقة
+                    </a>
+                    <form id="quick-approve-{{ req.id }}" method="POST" action="{{ url_for('leave_action', req_id=req.id) }}" style="display:none;">
+                        <input type="hidden" name="action" value="approve">
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-check-double"></i>
+                <h4>لا توجد طلبات معلقة</h4>
+                <p>كل طلبات الإجازات تمت معالجتها</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-sitemap" style="color:var(--purple); margin-left:8px;"></i>توزيع الموظفين حسب الأقسام</h3>
+            <a href="{{ url_for('reports_index') }}" class="btn btn-outline btn-sm">التقارير</a>
+        </div>
+        <div class="card-body">
+            {% if dept_stats %}
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                {% for d in dept_stats %}
+                <div>
+                    <div class="flex-between mb-8">
+                        <span class="bold" style="font-size:13px;">{{ d.name }}</span>
+                        <span class="badge badge-primary">{{ d.count }} موظف</span>
+                    </div>
+                    <div class="progress">
+                        {% set pct = (d.count / stats.total_employees * 100)|round(1) if stats.total_employees else 0 %}
+                        <div class="progress-bar {% if pct > 60 %}success{% elif pct > 25 %}warning{% endif %}" style="width: {{ pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-building"></i><h4>لا توجد بيانات</h4></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave" style="color:var(--success); margin-left:8px;"></i>ملخص الرواتب</h3>
+            <a href="{{ url_for('payroll_index') }}" class="btn btn-outline btn-sm">الرواتب</a>
+        </div>
+        <div class="card-body">
+            {% if last_period %}
+            <div class="salary-breakdown">
+                <div class="salary-row">
+                    <span>الفترة</span>
+                    <span class="bold">{{ last_period.name }}</span>
+                </div>
+                <div class="salary-row">
+                    <span>عدد الموظفين</span>
+                    <span class="bold">{{ last_period.record_count if last_period else '—' }}</span>
+                </div>
+                <div class="salary-row">
+                    <span>صافي الرواتب للشهر الحالي</span>
+                    <span class="bold money-positive">{{ fmt_money(stats.total_payroll_m) if stats.total_payroll_m is not none else '—' }}</span>
+                </div>
+                <div class="salary-row total">
+                    <span><i class="fas fa-wallet"></i> إجمالي المرتبات</span>
+                    <span class="text-success">{{ fmt_money(stats.total_payroll_m) if stats.total_payroll_m else 'إنتظر احتساب الشهر' }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calculator"></i>
+                <h4>لم يتم احتساب رواتب بعد</h4>
+                <p>احتسب رواتب الشهر من صفحة الرواتب والأجور</p>
+                <a href="{{ url_for('payroll_index') }}" class="btn btn-primary btn-sm mt-16">احتساب الرواتب</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-bell" style="color:var(--warning); margin-left:8px;"></i>التنبيهات الذكية</h3>
+            <a href="{{ url_for('reports_index') }}" class="btn btn-outline btn-sm">التقارير</a>
+        </div>
+        <div class="card-body" style="padding-top: 0;">
+            {% if notifications %}
+            <ul class="activity-list">
+                {% for n in notifications %}
+                <li>
+                    <div class="activity-icon a-{{ n.level }}"><i class="{{ n.icon }}"></i></div>
+                    <div class="activity-info">
+                        <div class="title">{{ n.title }}</div>
+                        <div class="desc">{{ n.text }}</div>
+                    </div>
+                    <a href="{{ n.link }}" class="btn btn-sm btn-outline">فتح</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <h4>كل شيء على ما يرام</h4>
+                <p>لا توجد تنبيهات تتطلب انتباهك حالياً</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

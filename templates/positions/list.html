@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}المسميات الوظيفية{% endblock %}
+{% block page_title %}المسميات الوظيفية{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <button class="btn btn-primary" onclick="openModal('position-modal')" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> وظيفة جديدة
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-briefcase" style="color:var(--purple); margin-left:8px;"></i> المسميات الوظيفية ({{ positions|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if positions %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>المسمى الوظيفي</th>
+                        <th>الوصف</th>
+                        <th>عدد الموظفين</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in positions %}
+                    <tr>
+                        <td class="bold"><i class="fas fa-briefcase" style="color:var(--purple); margin-left:8px;"></i> {{ p.title }}</td>
+                        <td class="muted">{{ p.description or '—' }}</td>
+                        <td><span class="badge badge-primary">{{ p.employees.filter_by(status='active').count() }} موظف</span></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('position_delete', pos_id=p.id) }}" onsubmit="return confirm('حذف وظيفة {{ p.title }}؟')">
+                                <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-briefcase"></i><h4>لا توجد مسميات وظيفية</h4></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal-overlay" id="position-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>وظيفة جديدة</h3>
+            <button class="modal-close" onclick="closeModal('position-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('position_new') }}">
+            <div class="form-group">
+                <label>المسمى الوظيفي <span class="required">*</span></label>
+                <input type="text" name="title" class="form-control" placeholder="مثال: محاسب أول" required>
+            </div>
+            <div class="form-group mt-16">
+                <label>الوصف</label>
+                <textarea name="description" class="form-control" placeholder="وصف مختصر للوظيفة"></textarea>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> إضافة</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('position-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

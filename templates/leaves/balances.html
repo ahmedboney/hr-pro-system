@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}أرصدة الإجازات{% endblock %}
+{% block page_title %}أرصدة الإجازات{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" class="flex gap-8" style="align-items:center;">
+        <label class="bold small">السنة:</label>
+        <select name="year" class="form-control" onchange="this.form.submit()">
+            {% for y in range(2023, 2031) %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <a href="{{ url_for('export_leaves_xlsx', year=year) }}" class="btn btn-outline"><i class="fas fa-file-excel" style="color:var(--success);"></i> تصدير Excel</a>
+    <a href="{{ url_for('leave_request') }}" class="btn btn-primary"><i class="fas fa-plus"></i> طلب إجازة</a>
+</div>
+
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        {% for lt in leave_types %}
+                        <th style="text-align:center;">{{ lt.name }}<br><small style="color:var(--text-3); font-weight:400;">مستحق/المتبقي</small></th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in balances_data %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ item.employee.first_name[0] }}{{ item.employee.last_name[0] if item.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ item.employee.full_name }}</div>
+                                    <div class="emp-id">{{ item.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        {% for lt in leave_types %}
+                            {% set bal = item.balances|selectattr('leave_type_id', 'equalto', lt.id)|first %}
+                            <td style="text-align:center;">
+                                {% if bal %}
+                                <span style="font-size: 13px;"><b>{{ bal.used_days }}/{{ bal.entitled_days }}</b></span>
+                                <div class="progress" style="width:50px; margin: 4px auto 0;">
+                                    {% set pct = (bal.used_days / bal.entitled_days * 100)|round(0) if bal.entitled_days else 0 %}
+                                    <div class="progress-bar {{ 'danger' if pct > 80 else ('warning' if pct > 50 else 'success') }}" style="width: {{ pct }}%"></div>
+                                </div>
+                                <div class="small {{ 'text-danger' if bal.remaining_days == 0 else 'text-success' }}" style="font-weight:700;">{{ bal.remaining_days }} متبقي</div>
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+
+{% block title %}الإعدادات{% endblock %}
+{% block page_title %}إعدادات النظام{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-building" style="color:var(--primary); margin-left:8px;"></i>بيانات الشركة</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم الشركة</label>
+                    <input type="text" name="company_name" class="form-control" value="{{ setting('company_name') or 'شركتي' }}">
+                </div>
+                <div class="form-group">
+                    <label>الاسم بالإنجليزية</label>
+                    <input type="text" name="company_name_en" class="form-control" value="{{ setting('company_name_en') or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>عنوان الشركة</label>
+                    <input type="text" name="company_address" class="form-control" value="{{ setting('company_address') or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" name="company_phone" class="form-control" value="{{ setting('company_phone') or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="text" name="company_email" class="form-control" value="{{ setting('company_email') or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>الرقم الضريبي</label>
+                    <input type="text" name="tax_number" class="form-control" value="{{ setting('tax_number') or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-clock" style="color:var(--success); margin-left:8px;"></i>إعدادات الحضور</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>بداية العمل</label>
+                    <input type="time" name="work_start" class="form-control" value="{{ setting('work_start') or '08:00' }}">
+                </div>
+                <div class="form-group">
+                    <label>نهاية العمل</label>
+                    <input type="time" name="work_end" class="form-control" value="{{ setting('work_end') or '17:00' }}">
+                </div>
+                <div class="form-group">
+                    <label>فترة السماح للتأخير (دقائق)</label>
+                    <input type="number" name="late_tolerance" class="form-control" value="{{ setting('late_tolerance') or '15' }}">
+                </div>
+                <div class="form-group">
+                    <label>معامل العمل الإضافي</label>
+                    <select name="overtime_rate" class="form-control">
+                        <option value="1.5" {% if setting('overtime_rate') == '1.5' %}selected{% endif %}>1.5 (معتاد)</option>
+                        <option value="2" {% if setting('overtime_rate') == '2' %}selected{% endif %}>2 (إجازات/ليلي)</option>
+                        <option value="1" {% if setting('overtime_rate') == '1' %}selected{% endif %}>1 (بسيط)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>يوم الجمعة إجازة</label>
+                    <select name="friday_off" class="form-control">
+                        <option value="yes" {% if setting('friday_off') == 'yes' %}selected{% endif %}>نعم</option>
+                        <option value="no" {% if setting('friday_off') == 'no' %}selected{% endif %}>لا</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>يوم السبت إجازة</label>
+                    <select name="saturday_off" class="form-control">
+                        <option value="yes" {% if setting('saturday_off') == 'yes' %}selected{% endif %}>نعم</option>
+                        <option value="no" {% if setting('saturday_off') == 'no' %}selected{% endif %}>لا</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-scale-balanced" style="color:var(--warning); margin-left:8px;"></i>إعدادات الإجازات</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>أيام الإجازة السنوية</label>
+                    <input type="number" name="annual_leave_days" class="form-control" value="{{ setting('annual_leave_days') or '21' }}">
+                </div>
+                <div class="form-group">
+                    <label>أيام الإجازة المرضية</label>
+                    <input type="number" name="sick_leave_days" class="form-control" value="{{ setting('sick_leave_days') or '15' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave" style="color:var(--purple); margin-left:8px;"></i>إعدادات الرواتب</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>نسبة التأمينات الاجتماعية (%)</label>
+                    <input type="number" name="social_insurance_rate" step="0.1" class="form-control" value="{{ setting('social_insurance_rate') or '11' }}">
+                </div>
+                <div class="form-group">
+                    <label>العملة</label>
+                    <input type="text" name="currency" class="form-control" value="{{ setting('currency') or 'ج.م' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-signature" style="color:var(--purple); margin-left:8px;"></i>التوقيعات والأسماء</h3>
+        </div>
+        <div class="card-body">
+            <p class="form-help" style="margin-bottom: 12px;">
+                <i class="fas fa-pen-to-square"></i> الأسماء والصفات هنا تظهر تلقائياً في ملفات <b>PDF</b> و<b>Excel</b>
+                والشهادات الرسمية (التذييلات والتوقيعات). عدّلها بما يناسب مسئول الشركة.
+            </p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>المسئول المالي - الصفة</label>
+                    <input type="text" name="sign_fin_role" class="form-control" value="{{ setting('sign_fin_role') or 'محاسب' }}">
+                </div>
+                <div class="form-group">
+                    <label>المسئول المالي - الاسم</label>
+                    <input type="text" name="sign_fin_name" class="form-control" value="{{ setting('sign_fin_name') or 'أحمد عبدالله' }}">
+                </div>
+                <div class="form-group">
+                    <label>مدير الموارد البشرية - الصفة</label>
+                    <input type="text" name="sign_hr_role" class="form-control" value="{{ setting('sign_hr_role') or 'مدير الموارد البشرية' }}">
+                </div>
+                <div class="form-group">
+                    <label>مدير الموارد البشرية - الاسم (اختياري)</label>
+                    <input type="text" name="sign_hr_name" class="form-control" value="{{ setting('sign_hr_name') or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-shield-halved" style="color:var(--danger); margin-left:8px;"></i>الأمان - مفتاح API للأجهزة</h3>
+        </div>
+        <div class="card-body">
+            <p class="form-help" style="margin-bottom: 12px;">
+                <i class="fas fa-fingerprint"></i> أجهزة البصمة تسجل الحضور عبر واجهة API محمية بمفتاح سري.
+                مرر المفتاح مع كل طلب في الهيدر <code>X-API-Key</code>، وقم بتجديده إذا خرج عن حوزتك.
+            </p>
+            <div class="form-row" style="gap: 10px; align-items:center;">
+                <input type="text" readonly class="form-control" value="{{ setting('api_key') or 'لم يولّد بعد' }}"
+                       id="api-key-field" style="direction:ltr; font-family:Consolas,monospace; background:var(--bg-2);"
+                       onclick="this.select(); navigator.clipboard && navigator.clipboard.writeText(this.value); flash('تم نسخ المفتاح', 'success');">
+                <button type="button" class="btn btn-outline" onclick="var f=document.getElementById('api-key-field'); f.select(); navigator.clipboard && navigator.clipboard.writeText(f.value);"><i class="fas fa-copy"></i> نسخ</button>
+                <button type="button" class="btn btn-warning" onclick="if(confirm('تجديد المفتاح يلغي المفاتيح القديمة فوراً. متابعة؟')){ document.getElementById('regenerate-key-form').submit(); }"><i class="fas fa-rotate"></i> تجديد</button>
+                <form id="regenerate-key-form" method="POST" action="{{ url_for('settings_regenerate_api_key') }}" style="display:none;"></form>
+            </div>
+            <div class="info-box mt-16" style="border-right:3px solid var(--success); padding:12px 14px; background:var(--bg-2); border-radius:8px;">
+                <div class="form-help" style="margin:0;">
+                    <i class="fas fa-code"></i> مثال الطلب:
+                    <code style="direction:ltr; display:block; margin-top:6px;">
+                        curl -X POST http://127.0.0.1:8080/api/fingerprint/punch<br>
+                        &nbsp;&nbsp;-H "X-API-Key: {{ setting('api_key') or 'HR-XXXX' }}"<br>
+                        &nbsp;&nbsp;-H "Content-Type: application/json"<br>
+                        &nbsp;&nbsp;-d "{\"fingerprint_id\":\"1001\",\"timestamp\":\"{{ today.strftime('%Y-%m-%d') }} 09:00:00\"}"
+                    </code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-database" style="color:var(--primary); margin-left:8px;"></i>النسخ الاحتياطي التلقائي</h3>
+            <a href="{{ url_for('backup_index') }}" class="btn btn-sm btn-outline"><i class="fas fa-clock-rotate-left"></i> إدارة النسخ</a>
+        </div>
+        <div class="card-body">
+            <div class="flex-between" style="flex-wrap:wrap; gap:10px;">
+                <div>
+                    <p class="form-help">
+                        <i class="fas fa-check-circle" style="color:var(--success);"></i>
+                        نسخة احتياطية تلقائية كل يوم الساعة <b>2:00 صباحاً</b> - يُحتفظ بآخر 30 نسخة.
+                    </p>
+                    <p class="form-help">
+                        <i class="fas fa-user-check" style="color:var(--success);"></i>
+                        حساب الغياب تلقائياً كل يوم الساعة <b>11:30 مساءً</b> لكل موظف لم يسجل حضوره ولم يسترح إجازة.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex gap-12 mt-24" style="margin-bottom: 40px;">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> حفظ الإعدادات</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل موظف' if is_edit else 'إضافة موظف' }}{% endblock %}
+{% block page_title %}{{ 'تعديل بيانات الموظف' if is_edit else 'إضافة موظف جديد' }}{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('employee_edit', emp_id=employee.id) if is_edit else url_for('employee_new') }}">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-id-card" style="color:var(--primary); margin-left:8px;"></i>البيانات الأساسية</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>رقم الموظف <span class="required">*</span></label>
+                    <input type="text" name="emp_id" class="form-control" value="{{ employee.emp_id if employee else '' }}" required placeholder="مثال: EMP001">
+                </div>
+                <div class="form-group">
+                    <label>رقم البصمة</label>
+                    <input type="text" name="fingerprint_id" class="form-control" value="{{ employee.fingerprint_id if employee else '' }}" placeholder="الرقم المسجل في جهاز البصمة">
+                </div>
+                <div class="form-group">
+                    <label>الاسم الأول <span class="required">*</span></label>
+                    <input type="text" name="first_name" class="form-control" value="{{ employee.first_name if employee else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>اسم العائلة <span class="required">*</span></label>
+                    <input type="text" name="last_name" class="form-control" value="{{ employee.last_name if employee else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>الرقم القومي</label>
+                    <input type="text" name="national_id" class="form-control" value="{{ employee.national_id if employee else '' }}" placeholder="14 رقم">
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الميلاد</label>
+                    <input type="date" name="birth_date" class="form-control" value="{{ fmt_date(employee.birth_date) if employee else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>الجنس</label>
+                    <select name="gender" class="form-control">
+                        <option value="">— اختر —</option>
+                        <option value="ذكر" {% if employee and employee.gender == 'ذكر' %}selected{% endif %}>ذكر</option>
+                        <option value="أنثى" {% if employee and employee.gender == 'أنثى' %}selected{% endif %}>أنثى</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الحالة الاجتماعية</label>
+                    <select name="marital_status" class="form-control">
+                        <option value="">— اختر —</option>
+                        <option value="أعزب" {% if employee and employee.marital_status == 'أعزب' %}selected{% endif %}>أعزب/عزباء</option>
+                        <option value="متزوج" {% if employee and employee.marital_status == 'متزوج' %}selected{% endif %}>متزوج/متزوجة</option>
+                        <option value="مطلق" {% if employee and employee.marital_status == 'مطلق' %}selected{% endif %}>مطلق/مطلقة</option>
+                        <option value="أرمل" {% if employee and employee.marital_status == 'أرمل' %}selected{% endif %}>أرمل/أرملة</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-phone-alt" style="color:var(--success); margin-left:8px;"></i>بيانات التواصل</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" name="phone" class="form-control" value="{{ employee.phone if employee else '' }}" dir="ltr">
+                </div>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" name="email" class="form-control" value="{{ employee.email if employee else '' }}" dir="ltr">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>العنوان</label>
+                    <input type="text" name="address" class="form-control" value="{{ employee.address if employee else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>شخص للطوارئ</label>
+                    <input type="text" name="emergency_contact" class="form-control" value="{{ employee.emergency_contact if employee else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>هاتف الطوارئ</label>
+                    <input type="tel" name="emergency_phone" class="form-control" value="{{ employee.emergency_phone if employee else '' }}" dir="ltr">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-briefcase" style="color:var(--purple); margin-left:8px;"></i>البيانات الوظيفية</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>القسم</label>
+                    <select name="department_id" class="form-control">
+                        <option value="">— اختر —</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}" {% if employee and employee.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المسمى الوظيفي</label>
+                    <select name="position_id" class="form-control">
+                        <option value="">— اختر —</option>
+                        {% for p in positions %}
+                        <option value="{{ p.id }}" {% if employee and employee.position_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ التعيين</label>
+                    <input type="date" name="hire_date" class="form-control" value="{{ fmt_date(employee.hire_date) if employee else '' }}">
+                </div>
+                <div class="form-group">
+                    <label>نوع التعيين</label>
+                    <select name="employment_type" class="form-control">
+                        <option value="full_time" {% if employee and employee.employment_type == 'full_time' %}selected{% endif %}>دوام كامل</option>
+                        <option value="part_time" {% if employee and employee.employment_type == 'part_time' %}selected{% endif %}>دوام جزئي</option>
+                        <option value="contract" {% if employee and employee.employment_type == 'contract' %}selected{% endif %}>عقد مؤقت</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الحالة</label>
+                    <select name="status" class="form-control">
+                        <option value="active" {% if not employee or employee.status == 'active' %}selected{% endif %}>على رأس العمل</option>
+                        <option value="on_leave" {% if employee and employee.status == 'on_leave' %}selected{% endif %}>في إجازة</option>
+                        <option value="terminated" {% if employee and employee.status == 'terminated' %}selected{% endif %}>منتهي خدمته</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave" style="color:var(--success); margin-left:8px;"></i>البيانات المالية</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>الراتب الأساسي</label>
+                    <div class="input-group">
+                        <input type="number" name="base_salary" class="form-control" step="0.01" value="{{ employee.base_salary if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>بدل السكن</label>
+                    <div class="input-group">
+                        <input type="number" name="housing_allowance" class="form-control" step="0.01" value="{{ employee.housing_allowance if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>بدل الانتقال</label>
+                    <div class="input-group">
+                        <input type="number" name="transport_allowance" class="form-control" step="0.01" value="{{ employee.transport_allowance if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>بدل الوجبات</label>
+                    <div class="input-group">
+                        <input type="number" name="food_allowance" class="form-control" step="0.01" value="{{ employee.food_allowance if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>بدل الهاتف</label>
+                    <div class="input-group">
+                        <input type="number" name="phone_allowance" class="form-control" step="0.01" value="{{ employee.phone_allowance if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>بدلات أخرى</label>
+                    <div class="input-group">
+                        <input type="number" name="other_allowances" class="form-control" step="0.01" value="{{ employee.other_allowances if employee else 0 }}">
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                {% if employee %}
+                <div class="form-group" style="grid-column: span 2;">
+                    <div class="bg-light" style="padding: 12px 16px; border-radius: 10px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div class="bold">إجمالي الراتب الحالي</div>
+                            <div class="small muted">الراتب الأساسي + جميع البدلات</div>
+                        </div>
+                        <div class="stat-value" style="color:var(--success);">{{ fmt_money(employee.total_salary) }} <span class="small">ج.م</span></div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>رقم الحساب البنكي</label>
+                    <input type="text" name="bank_account" class="form-control" value="{{ employee.bank_account if employee else '' }}" dir="ltr">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex gap-12 mt-24" style="margin-bottom: 40px;">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save"></i> {{ 'حفظ التعديلات' if is_edit else 'إضافة الموظف' }}
+        </button>
+        <a href="{{ url_for('employee_view', emp_id=employee.id) if is_edit else url_for('employees_list') }}" class="btn btn-outline btn-lg">إلغاء</a>
+    </div>
+</form>
+{% endblock %}

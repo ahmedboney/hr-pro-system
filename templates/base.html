@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}نظام الموارد البشرية{% endblock %} | {{ current_user.full_name if current_user else '' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon-512.png') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+
+<div class="flash-container" id="flash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                {% if category == 'success' %}<i class="fas fa-check-circle"></i>
+                {% elif category == 'danger' %}<i class="fas fa-exclamation-circle"></i>
+                {% elif category == 'warning' %}<i class="fas fa-exclamation-triangle"></i>
+                {% else %}<i class="fas fa-info-circle"></i>{% endif %}
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+</div>
+
+<div class="layout">
+    <!-- Sidebar -->
+    {% if current_user %}
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo"><i class="fas fa-fingerprint"></i></div>
+            <div class="brand-text">
+                <h3>HR Pro System</h3>
+                <p>نظام الموارد البشرية المتكامل</p>
+            </div>
+        </div>
+
+        <div class="nav-section">الرئيسية</div>
+        <nav class="nav-menu">
+            <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-th-large"></i> لوحة التحكم
+            </a>
+            <a href="{{ url_for('attendance_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('attendance') %}active{% endif %}">
+                <i class="fas fa-clipboard-check"></i> الحضور والانصراف
+            </a>
+            <a href="{{ url_for('fingerprint_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('fingerprint') %}active{% endif %}">
+                <i class="fas fa-fingerprint"></i> أجهزة البصمة
+            </a>
+        </nav>
+
+        <div class="nav-section">الموارد البشرية</div>
+        <nav class="nav-menu">
+            <a href="{{ url_for('employees_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('employee') %}active{% endif %}">
+                <i class="fas fa-users"></i> الموظفون
+            </a>
+            <a href="{{ url_for('leaves_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('leave') %}active{% endif %}">
+                <i class="fas fa-plane-departure"></i> الإجازات
+            </a>
+            <a href="{{ url_for('leaves_balances') }}" class="nav-item {% if request.endpoint == 'leaves_balances' %}active{% endif %}">
+                <i class="fas fa-calendar-check"></i> أرصدة الإجازات
+            </a>
+        </nav>
+
+        <div class="nav-section">المالية</div>
+        <nav class="nav-menu">
+            <a href="{{ url_for('payroll_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('payroll') %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> الرواتب والأجور
+            </a>
+            <a href="{{ url_for('loans_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('loan') %}active{% endif %}">
+                <i class="fas fa-hand-holding-usd"></i> السلف والقروض
+            </a>
+            <a href="{{ url_for('bonuses_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('bonus') %}active{% endif %}">
+                <i class="fas fa-award"></i> المكافآت والحوافز
+            </a>
+        </nav>
+
+        <div class="nav-section">الإدارة</div>
+        <nav class="nav-menu">
+            <a href="{{ url_for('departments_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('department') %}active{% endif %}">
+                <i class="fas fa-building"></i> الأقسام
+            </a>
+            <a href="{{ url_for('positions_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('position') %}active{% endif %}">
+                <i class="fas fa-briefcase"></i> المسميات الوظيفية
+            </a>
+            <a href="{{ url_for('reports_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('report') %}active{% endif %}">
+                <i class="fas fa-chart-pie"></i> التقارير
+            </a>
+            <a href="{{ url_for('insurance_report') }}" class="nav-item {% if request.endpoint == 'insurance_report' or request.endpoint == 'export_insurance_xlsx' %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar"></i> التأمينات والضرائب
+            </a>
+            {% if current_user.role in ['admin', 'hr'] %}
+            <a href="{{ url_for('settings_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}">
+                <i class="fas fa-cog"></i> الإعدادات
+            </a>
+            {% endif %}
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('users_list') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('user') %}active{% endif %}">
+                <i class="fas fa-user-shield"></i> مستخدمو النظام
+            </a>
+            <a href="{{ url_for('backup_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('backup') %}active{% endif %}">
+                <i class="fas fa-database"></i> النسخ الاحتياطي
+            </a>
+            {% endif %}
+            <a href="{{ url_for('guide') }}" class="nav-item {% if request.endpoint == 'guide' %}active{% endif %}">
+                <i class="fas fa-book-open"></i> دليل الاستخدام
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-copyright">
+                <i class="fas fa-shield-halved"></i> نظام HR Pro
+                <div style="font-size:10px; margin-top:4px; line-height:1.7;">
+                    حقوق الملكية محفوظة © {{ today.year }}<br>{% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}
+                </div>
+            </div>
+        </div>
+    </aside>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="main">
+        <header class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button id="sidebar-toggle" class="btn btn-outline btn-sm sidebar-toggle" aria-label="فتح القائمة"><i class="fas fa-bars"></i></button>
+                <div>
+                    <h1>{% block page_title %}لوحة التحكم{% endblock %}</h1>
+                    <div class="subtitle">نظام الحضور والانصراف وإدارة الموارد البشرية</div>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <div class="topbar-date">
+                    <i class="far fa-calendar-alt"></i>
+                    <span id="live-date">{{ today.strftime('%A، %d %B %Y') if today else '' }}</span>
+                </div>
+                <div class="topbar-date" style="font-variant-numeric: tabular-nums;">
+                    <i class="far fa-clock"></i>
+                    <span id="live-clock">--:--:--</span>
+                </div>
+                {% if current_user %}
+                <div class="user-menu" onclick="window.location='{{ url_for('profile') }}'">
+                    <div class="avatar">{{ current_user.full_name[0] if current_user.full_name else 'U' }}</div>
+                    <div class="user-info">
+                        <div class="name">{{ current_user.full_name }}</div>
+                        <div class="role">
+                            {% if current_user.role == 'admin' %}مدير النظام
+                            {% elif current_user.role == 'hr' %}مدير الموارد البشرية
+                            {% else %}موظف{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <a href="{{ url_for('guide') }}" class="btn btn-outline btn-sm" title="دليل الاستخدام">
+                    <i class="fas fa-book-open"></i>
+                </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

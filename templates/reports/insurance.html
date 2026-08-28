@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}التأمينات والضرائب{% endblock %}
+{% block page_title %}كشف التأمينات الاجتماعية وضريبة كسب العمل{% endblock %}
+
+{% block content %}
+<div class="card mb-24">
+    <div class="card-header">
+        <h3><i class="fas fa-file-invoice-dollar" style="color:var(--primary); margin-left:8px;"></i>اختيار الفترة</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('insurance_report') }}" class="filter-bar">
+            <div class="filter-item">
+                <label for="period_id">فترة الرواتب</label>
+                <select name="period_id" id="period_id" onchange="this.form.submit()">
+                    {% for p in periods %}
+                    <option value="{{ p.id }}" {% if period and p.id == period.id %}selected{% endif %}>
+                        {{ p.name }} {% if p.status == 'active' %}(نشطة){% elif p.status == 'closed' %}(مغلقة){% else %}(محسوبة){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if period %}
+            <div class="filter-item">
+                <a href="{{ url_for('export_insurance_xlsx', period_id=period.id) }}" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Excel
+                </a>
+                <a href="{{ url_for('export_insurance_pdf', period_id=period.id) }}" class="btn btn-danger">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <a href="{{ url_for('export_payroll_xlsx', period_id=period.id) }}" class="btn btn-outline">
+                    <i class="fas fa-money-bill-wave"></i> كشف الرواتب (Excel)
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if period %}
+<div class="card mb-24">
+    <div class="card-header">
+        <h3><i class="fas fa-calculator" style="color:var(--primary); margin-left:8px;"></i>ملخص الفترة {{ period.name }}</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid grid-4">
+            <div class="stat-card">
+                <div class="stat-icon s-bg-primary"><i class="fas fa-users"></i></div>
+                <div class="stat-value">{{ records|length }}</div>
+                <div class="stat-label">عدد الموظفين</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon s-bg-info"><i class="fas fa-scale-balanced"></i></div>
+                <div class="stat-value" style="font-size:16px;">{{ fmt_money(totals.salary) }}</div>
+                <div class="stat-label">إجمالي المرتب التأميني</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon s-bg-warning"><i class="fas fa-shield-halved"></i></div>
+                <div class="stat-value" style="font-size:16px;">{{ fmt_money(totals.insur) }}</div>
+                <div class="stat-label">إجمالي استقطاع التأمينات</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon s-bg-danger"><i class="fas fa-percent"></i></div>
+                <div class="stat-value" style="font-size:16px;">{{ fmt_money(totals.tax) }}</div>
+                <div class="stat-label">إجمالي ضريبة كسب العمل</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-table" style="color:var(--primary); margin-left:8px;"></i>تفاصيل الاستقطاعات - فترة {{ period.name }}</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if records %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>م</th>
+                        <th>رقم الموظف</th>
+                        <th>الاسم</th>
+                        <th>المرتب التأميني</th>
+                        <th>تأمينات</th>
+                        <th>صافي الاستقطاع</th>
+                        <th>ضريبة كسب العمل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ rec.employee.emp_id }}</td>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar" style="width:30px; height:30px; font-size:11px;">{{ rec.employee.first_name[0] }}{{ rec.employee.last_name[0] if rec.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name" style="font-size:13px;">{{ rec.employee.full_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="bold">{{ fmt_money(rec.base_salary + rec.housing_allowance + rec.transport_allowance + rec.food_allowance) }}</td>
+                        <td class="text-warning bold">{{ fmt_money(rec.social_insurance) }}</td>
+                        <td class="text-warning bold">{{ fmt_money(rec.social_insurance) }}</td>
+                        <td class="text-danger bold">{{ fmt_money(rec.tax_amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="summary-row">
+                        <td colspan="3" class="bold">الإجمالي</td>
+                        <td class="bold text-success">{{ fmt_money(totals.salary) }}</td>
+                        <td class="bold text-warning">{{ fmt_money(totals.insur) }}</td>
+                        <td class="bold text-warning">{{ fmt_money(totals.insur) }}</td>
+                        <td class="bold text-danger">{{ fmt_money(totals.tax) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-receipt"></i>
+            <h4>لا توجد سجلات رواتب لهذه الفترة</h4>
+            <p>يتم احتساب التأمينات والضرائب عند معالجة رواتب الفترة</p>
+            <a href="{{ url_for('payroll_details', period_id=period.id) }}" class="btn btn-primary btn-sm mt-16">احتساب الرواتب</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="fas fa-clock"></i>
+            <h4>لا توجد فترات رواتب</h4>
+            <p>أنشئ فترة رواتب واحسبها أولاً من صفحة الرواتب والأجور</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<p class="form-help mt-16">
+    <i class="fas fa-shield-halved"></i> تُرفه كشوف التأمينات والضرائب بتوقيع
+    <b>{% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}</b> وحقوق الملكية محفوظة.
+</p>
+{% endblock %}

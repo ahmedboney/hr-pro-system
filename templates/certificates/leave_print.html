@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>شهادة إجازة - {{ req.employee.full_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background: #f1f5f9;
+            padding: 24px;
+        }
+        .toolbar {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .toolbar a, .toolbar button {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .btn-back { background: #64748b; color: #fff; }
+        .btn-print { background: #1e3a8a; color: #fff; }
+        .btn-pdf { background: #dc2626; color: #fff; }
+        .btn-sign { background: #16a34a; color: #fff; }
+        .certificate {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 48px 56px;
+            border: 2px solid #1e3a8a;
+            border-radius: 4px;
+            position: relative;
+            box-shadow: 0 4px 24px rgba(30, 58, 138, 0.08);
+        }
+        .certificate::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        .cert-title { text-align: center; font-size: 26px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px; }
+        .cert-sub { text-align: center; font-size: 14px; color: #64748b; margin-bottom: 28px; }
+        .cert-name { text-align: center; font-size: 30px; font-weight: 800; color: #1e3a8a; margin: 8px 0 16px; }
+        .cert-body { text-align: right; font-size: 15px; line-height: 2.1; color: #1e293b; }
+        .cert-body b { color: #0f172a; }
+        .cert-date { text-align: left; font-size: 13px; color: #475569; margin-top: 24px; }
+        .sign-wrap { display: flex; justify-content: space-between; margin-top: 56px; padding: 0 16px; }
+        .sign-box { text-align: center; width: 45%; }
+        .sign-box .name { font-weight: 800; font-size: 14px; color: #1e293b; border-top: 1px solid #94a3b8; padding-top: 10px; }
+        .footer-note {
+            max-width: 800px;
+            margin: 16px auto 0;
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .toolbar { display: none; }
+            .certificate { box-shadow: none; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="javascript:history.length ? history.go(-1) : window.location='/' " class="btn-back"><i class="fas fa-arrow-right"></i> رجوع</a>
+        <button class="btn-sign" onclick="window.open(window.location.pathname + '?signed=1','_blank')"><i class="fas fa-signature"></i> نسخة بلا موقع</button>
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
+        <a href="?pdf=1" class="btn-pdf"><i class="fas fa-file-pdf"></i> حفظ PDF</a>
+    </div>
+
+    <div class="certificate">
+        <h1 class="cert-title">{{ get_company_name() }}</h1>
+        <div class="cert-sub">نظام الموارد البشرية المتكامل</div>
+        <div style="text-align:center; font-size:16px; font-weight:700; color:#1e40af; margin-bottom:20px;">شهادة إجازة</div>
+        <div style="text-align:center; font-size:14px; color:#475569;">بسم الله الرحمن الرحيم</div>
+        <div class="cert-name">{{ req.employee.full_name }}</div>
+        <div class="cert-body">
+            <p>
+                تشهد شركة <b>{{ get_company_name() }}</b> بأن الموظف
+                <b>{{ req.employee.full_name }}</b>
+                رقم وظيفي <b>{{ req.employee.emp_id }}</b> - القسم
+                <b>{{ req.employee.department.name if req.employee.department else '—' }}</b> -
+                والوظيفة <b>{{ req.employee.position.title if req.employee.position else '—' }}</b>.
+            </p>
+            <p style="margin-top:10px;">
+                قد مُنح <b>{{ req.leave_type.name }}</b> اعتباراً من
+                <b>{{ req.start_date.day }} {{ ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][req.start_date.month - 1] }} {{ req.start_date.year }}</b>
+                وحتى
+                <b>{{ req.end_date.day }} {{ ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][req.end_date.month - 1] }} {{ req.end_date.year }}</b>
+                لمدة <b>{{ req.days_count }} يوم</b>.
+            </p>
+            {% if req.review_notes %}
+            <p style="margin-top:10px; color:#475569;">ملاحظات الموافقة: {{ req.review_notes }}</p>
+            {% endif %}
+            <p style="margin-top:10px;">
+                وتُحتسب هذه الإجازة ضمن رصيد إجازاته المستحقة، وقد تنازل الموظف عن ضمها إلى عمله.
+            </p>
+        </div>
+        <div class="cert-date">
+            تحريراً في: {{ today.day }} {{ ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][today.month - 1] }} {{ today.year }}
+        </div>
+        <div class="sign-wrap">
+            <div class="sign-box"><div class="name">{{ setting('sign_hr_role') or 'مدير الموارد البشرية' }}{% if setting('sign_hr_name') %} / {{ setting('sign_hr_name') }}{% endif %}</div></div>
+            <div class="sign-box"><div class="name">المدير المالي{% if setting('sign_fin_role') or setting('sign_fin_name') %} / {{ setting('sign_fin_role') or 'محاسب' }}{% endif %}{% if setting('sign_fin_name') %} / {{ setting('sign_fin_name') }}{% endif %}</div></div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        صادر آلياً من نظام الموارد البشرية المتكامل - حقوق الملكية محفوظة © {{ today.year }} - {% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}
+    </div>
+</body>
+</html>

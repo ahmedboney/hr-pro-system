@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}الحضور والانصراف{% endblock %}
+{% block page_title %}سجل الحضور والانصراف{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-24">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-user-check"></i></div>
+        <div class="stat-value">{{ present }}</div>
+        <div class="stat-label">حاضر</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-user-clock"></i></div>
+        <div class="stat-value">{{ late }}</div>
+        <div class="stat-label">متأخر</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-danger"><i class="fas fa-user-times"></i></div>
+        <div class="stat-value">{{ absent }}</div>
+        <div class="stat-label">غائب</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-info"><i class="fas fa-plane-departure"></i></div>
+        <div class="stat-value">{{ on_leave }}</div>
+        <div class="stat-label">في إجازة</div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <div class="form-group">
+        <form method="GET" class="flex gap-8" style="align-items:center; flex-wrap:wrap;">
+            <i class="fas fa-calendar-day" style="color:var(--text-3);"></i>
+            <input type="date" name="date" class="form-control" value="{{ sel_date }}" onchange="this.form.submit()">
+            <select name="dept" class="form-control" onchange="this.form.submit()">
+                <option value="">كل الأقسام</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {% if dept_id|string == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="present" {% if status_filter == 'present' %}selected{% endif %}>حاضر</option>
+                <option value="late" {% if status_filter == 'late' %}selected{% endif %}>متأخر</option>
+                <option value="absent" {% if status_filter == 'absent' %}selected{% endif %}>غائب</option>
+                <option value="leave" {% if status_filter == 'leave' %}selected{% endif %}>إجازة</option>
+            </select>
+            <a href="{{ url_for('attendance_report') }}" class="btn btn-outline btn-sm"><i class="fas fa-chart-bar"></i> تقرير شهري</a>
+            <a href="{{ url_for('export_attendance_pdf', month=att_date.month, year=att_date.year) }}" class="btn btn-outline btn-sm"><i class="fas fa-file-pdf" style="color:var(--danger);"></i> PDF</a>
+            <a href="{{ url_for('export_attendance_xlsx', month=today.month, year=today.year) }}" class="btn btn-outline btn-sm"><i class="fas fa-file-excel" style="color:var(--success);"></i> Excel</a>
+            <a href="{{ url_for('attendance_import') }}" class="btn btn-outline btn-sm"><i class="fas fa-file-import"></i> استيراد</a>
+        </form>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="POST" action="{{ url_for('attendance_mark_absent') }}">
+            <button type="submit" class="btn btn-outline btn-sm" title="حساب الغياب تلقائياً (من لم يسجل ولم يسترح إجازة)">
+                <i class="fas fa-user-slash"></i> حساب الغياب
+            </button>
+        </form>
+        <button class="btn btn-primary" onclick="openModal('manual-modal')"><i class="fas fa-pen"></i> تسجيل يدوي</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-clipboard-list" style="color:var(--primary); margin-left:8px;"></i> سجلات يوم {{ att_date.strftime('%Y-%m-%d') }} ({{ records|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if records %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>القسم</th>
+                        <th>الحضور</th>
+                        <th>الانصراف</th>
+                        <th>ساعات العمل</th>
+                        <th>إضافي</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ r.employee.first_name[0] }}{{ r.employee.last_name[0] if r.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ r.employee.full_name }}</div>
+                                    <div class="emp-id">{{ r.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ r.employee.department.name if r.employee.department else '—' }}</td>
+                        <td class="bold" style="color:var(--primary);">{{ r.check_in_time.strftime('%I:%M %p') if r.check_in_time else '—' }}</td>
+                        <td class="bold" style="color:var(--danger);">{{ r.check_out_time.strftime('%I:%M %p') if r.check_out_time else '—' }}</td>
+                        <td>{{ r.worked_hours if r.check_in_time and r.check_out_time else '—' }} {% if r.worked_hours %}ساعة{% endif %}</td>
+                        <td>{% if r.overtime_hours > 0 %}<span class="badge badge-purple">+{{ r.overtime_hours }} ساعة</span>{% else %}—{% endif %}</td>
+                        <td>
+                            {% if r.status == 'present' %}<span class="badge badge-success"><i class="fas fa-check-circle"></i> حاضر</span>
+                            {% elif r.status == 'late' %}<span class="badge badge-warning"><i class="fas fa-clock"></i> متأخر {{ r.late_minutes }}د</span>
+                            {% elif r.status == 'absent' %}<span class="badge badge-danger"><i class="fas fa-times-circle"></i> غائب</span>
+                            {% elif r.status == 'leave' %}<span class="badge badge-info">إجازة</span>
+                            {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline" onclick="openModal('edit-modal-{{ r.id }}')" title="تعديل"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+
+                    <!-- Edit modal -->
+                    <div class="modal-overlay" id="edit-modal-{{ r.id }}">
+                        <div class="modal">
+                            <div class="modal-header">
+                                <h3>تعديل سجل {{ r.employee.full_name }}</h3>
+                                <button class="modal-close" onclick="closeModal('edit-modal-{{ r.id }}')">&times;</button>
+                            </div>
+                            <form method="POST" action="{{ url_for('attendance_update', att_id=r.id) }}">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>الحالة</label>
+                                        <select name="status" class="form-control">
+                                            <option value="present" {% if r.status == 'present' %}selected{% endif %}>حاضر</option>
+                                            <option value="late" {% if r.status == 'late' %}selected{% endif %}>متأخر</option>
+                                            <option value="absent" {% if r.status == 'absent' %}selected{% endif %}>غائب</option>
+                                            <option value="leave" {% if r.status == 'leave' %}selected{% endif %}>إجازة</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الحضور</label>
+                                        <input type="time" name="check_in" class="form-control" value="{{ r.check_in_time.strftime('%H:%M') if r.check_in_time else '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>الانصراف</label>
+                                        <input type="time" name="check_out" class="form-control" value="{{ r.check_out_time.strftime('%H:%M') if r.check_out_time else '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>ملاحظات</label>
+                                        <input type="text" name="notes" class="form-control" value="{{ r.notes or '' }}">
+                                    </div>
+                                </div>
+                                <div class="flex gap-8 mt-16">
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+                                    <button type="button" class="btn btn-outline" onclick="closeModal('edit-modal-{{ r.id }}')">إلغاء</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-fingerprint"></i>
+            <h4>لا توجد سجلات حضور لهذا اليوم</h4>
+            <p>لم يسجل أي موظف حضوراً بعد، استخدم "تسجيل يدوي" أو مزامنة جهاز البصمة</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Manual entry modal -->
+<div class="modal-overlay" id="manual-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>تسجيل حضور يدوي</h3>
+            <button class="modal-close" onclick="closeModal('manual-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('attendance_manual') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>الموظف <span class="required">*</span></label>
+                    <select name="employee_id" class="form-control" required>
+                        <option value="">— اختر الموظف —</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.emp_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الإجراء</label>
+                    <select name="action" class="form-control">
+                        <option value="check_in">حضور</option>
+                        <option value="check_out">انصراف</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>التاريخ</label>
+                    <input type="date" name="date" class="form-control" value="{{ sel_date }}" required>
+                </div>
+                <div class="form-group">
+                    <label>الوقت</label>
+                    <input type="time" name="time" class="form-control" value="{{ today_now if today_now else '' }}">
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> تسجيل</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('manual-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

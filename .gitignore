@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Data & secrets (لا تُرفع أبداً إلى GitHub)
+hr_system.db
+hr_system.db-journal
+*.db
+*.db-journal
+secret.key
+server.pid
+run.log
+
+# Logs & backups
+logs/
+backups/
+backups_auto/
+
+# Builds
+build/
+dist/
+*.spec
+releases/
+
+# Screenshots local (نُرفع صور PNG فقط إلى GitHub، تبقى PDF وDB خارجاً)
+screenshots/*
+!screenshots/*.png
+!screenshots/pdf_preview/
+!screenshots/pdf_preview/*.png
+screenshots/pdf_preview/*.pdf
+
+# IDE
+.vscode/
+.idea/

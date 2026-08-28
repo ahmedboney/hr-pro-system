@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}مفردات المرتب — {{ record.employee.full_name }}{% endblock %}
+{% block page_title %}مفردات المرتب{% endblock %}
+
+{% block content %}
+<div class="no-print" style="margin-bottom: 20px;">
+    <button class="btn btn-primary" onclick="printPage()"><i class="fas fa-print"></i> طباعة الكشف</button>
+    <a href="{{ url_for('export_payslip_pdf', record_id=record.id) }}" class="btn btn-outline"><i class="fas fa-file-pdf" style="color:var(--danger);"></i> تحميل مفردات المرتب PDF</a>
+    <a href="{{ url_for('export_payslip_xlsx', record_id=record.id) }}" class="btn btn-outline"><i class="fas fa-file-excel" style="color:var(--success);"></i> تحميل مفردات المرتب Excel</a>
+    <a href="{{ url_for('payroll_details', period_id=record.period_id) }}" class="btn btn-outline">رجوع</a>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-body" style="padding: 36px;">
+        <!-- Header -->
+        <div class="flex-between" style="border-bottom: 3px solid var(--dark); padding-bottom: 18px; margin-bottom: 24px;">
+            <div>
+                <h2 style="font-size: 24px; font-weight: 800; color: var(--dark);">مفردات المرتب</h2>
+                <div class="muted small">فترة: {{ record.period.name }}</div>
+            </div>
+            <div style="text-align:left;">
+                <div class="bold" style="font-size: 16px; color: var(--primary);">{{ get_company_name() }}</div>
+                <div class="muted small" dir="ltr">HR System</div>
+            </div>
+        </div>
+
+        <!-- Employee info -->
+        <div class="grid grid-2" style="margin-bottom: 24px;">
+            <div class="salary-breakdown">
+                <div class="salary-row"><span>اسم الموظف</span><span class="bold">{{ record.employee.full_name }}</span></div>
+                <div class="salary-row"><span>رقم الموظف</span><span class="bold">{{ record.employee.emp_id }}</span></div>
+                <div class="salary-row"><span>القسم</span><span class="bold">{{ record.employee.department.name if record.employee.department else '—' }}</span></div>
+                <div class="salary-row"><span>الوظيفة</span><span class="bold">{{ record.employee.position.title if record.employee.position else '—' }}</span></div>
+            </div>
+            <div class="salary-breakdown">
+                <div class="salary-row"><span>تاريخ الإصدار</span><span class="bold">{{ today.strftime('%Y-%m-%d') }}</span></div>
+                <div class="salary-row"><span>الصافي المستحق</span><span class="bold text-success" style="font-size:18px;">{{ fmt_money(record.net_salary) }} ج.م</span></div>
+                <div class="salary-row"><span>الحالة</span>
+                    {% if record.status == 'paid' %}<span class="badge badge-success">مدفوع</span>
+                    {% else %}<span class="badge badge-warning">قيد المعالجة</span>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Earnings -->
+        <h4 class="form-section-title"><i class="fas fa-arrow-down-to-line"></i> الإضافات</h4>
+        <div class="table-wrap mb-16">
+            <table>
+                <tbody>
+                    <tr><td>الراتب الأساسي</td><td class="text-left bold">{{ fmt_money(record.base_salary) }}</td></tr>
+                    <tr><td>بدل السكن</td><td class="text-left bold">{{ fmt_money(record.housing_allowance) }}</td></tr>
+                    <tr><td>بدل الانتقال</td><td class="text-left bold">{{ fmt_money(record.transport_allowance) }}</td></tr>
+                    <tr><td>بدل الوجبات</td><td class="text-left bold">{{ fmt_money(record.food_allowance) }}</td></tr>
+                    <tr><td>بدل الهاتف</td><td class="text-left bold">{{ fmt_money(record.phone_allowance) }}</td></tr>
+                    {% if record.other_allowances %}<tr><td>بدلات أخرى</td><td class="text-left bold">{{ fmt_money(record.other_allowances) }}</td></tr>{% endif %}
+                    <tr><td>العمل الإضافي</td><td class="text-left bold">{{ fmt_money(record.overtime_amount) }}</td></tr>
+                    <tr><td>المكافآت والحوافز</td><td class="text-left bold">{{ fmt_money(record.bonus_amount) }}</td></tr>
+                    <tr style="background: var(--success-bg);">
+                        <td class="bold">الإجمالي</td>
+                        <td class="text-left bold text-success" style="font-size:16px;">{{ fmt_money(record.gross_salary) }} ج.م</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Deductions -->
+        <h4 class="form-section-title"><i class="fas fa-arrow-up-from-line"></i> الخصومات</h4>
+        <div class="table-wrap mb-16">
+            <table>
+                <tbody>
+                    <tr><td>خصم الغياب ({{ record.absent_days }} يوم)</td><td class="text-left bold">{{ fmt_money(record.absent_deduction) }}</td></tr>
+                    <tr><td>خصم التأخير ({{ record.late_minutes_total }} دقيقة)</td><td class="text-left bold">{{ fmt_money(record.late_deduction) }}</td></tr>
+                    {% if record.unpaid_leave_days %}<tr><td>إجازة بدون أجر ({{ record.unpaid_leave_days }} يوم)</td><td class="text-left bold">{{ fmt_money(record.unpaid_leave_deduction) }}</td></tr>{% endif %}
+                    <tr><td>تأمينات اجتماعية</td><td class="text-left bold">{{ fmt_money(record.social_insurance) }}</td></tr>
+                    <tr><td>ضرائب</td><td class="text-left bold">{{ fmt_money(record.tax_amount) }}</td></tr>
+                    <tr><td>أقساط القروض</td><td class="text-left bold">{{ fmt_money(record.loan_deduction) }}</td></tr>
+                    {% if record.other_deductions %}<tr><td>خصومات أخرى</td><td class="text-left bold">{{ fmt_money(record.other_deductions) }}</td></tr>{% endif %}
+                    <tr style="background: var(--danger-bg);">
+                        <td class="bold">إجمالي الخصومات</td>
+                        <td class="text-left bold text-danger" style="font-size:16px;">{{ fmt_money(record.total_deductions) }} ج.م</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Net -->
+        <div style="background: linear-gradient(135deg, var(--dark), var(--primary-dark)); color: #fff; border-radius: 12px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+            <div>
+                <div style="font-size: 13px; opacity: 0.8;">صافي الراتب المستحق</div>
+                <div style="font-size: 12px; opacity: 0.6;">{{ get_amount_words(record.net_salary) }}</div>
+            </div>
+            <div style="font-size: 26px; font-weight: 800;">{{ fmt_money(record.net_salary) }} <small style="font-size: 14px;">ج.م</small></div>
+        </div>
+
+        {% if record.notes %}
+        <div class="mt-16">
+            <div class="bold small mb-8">ملاحظات:</div>
+            <p class="muted small">{{ record.notes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Signatures -->
+        <div class="grid grid-2 mt-24" style="margin-top: 40px;">
+            <div style="text-align:center;">
+                <div class="muted small mb-24">توقيع الموظف</div>
+                <div style="border-top: 1px solid var(--border); padding-top: 8px; width: 200px; margin: 0 auto; font-size: 12px; color: var(--text-3);">........................................</div>
+            </div>
+            <div style="text-align:center;">
+                <div class="muted small mb-24">ختم الشركة وتوقيع الإدارة</div>
+                <div style="border-top: 1px solid var(--border); padding-top: 8px; width: 200px; margin: 0 auto; font-size: 12px; color: var(--text-3);">........................................</div>
+            </div>
+        </div>
+
+        <!-- Copyright -->
+        <div class="text-center muted" style="margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--light-2); font-size: 11px;">
+            إعداد البرنامج: نظام الموارد البشرية المتكامل - حقوق الملكية محفوظة © {{ today.year }} - {% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

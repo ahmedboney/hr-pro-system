@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}تقرير الحضور الشهري{% endblock %}
+{% block page_title %}التقرير الشهري للحضور{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" class="flex gap-8" style="align-items:center;">
+        <select name="year" class="form-control" onchange="this.form.submit()">
+            {% for y in range(2023, 2031) %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="month" class="form-control" onchange="this.form.submit()">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][m] }}</option>
+            {% endfor %}
+        </select>
+        <a href="{{ url_for('attendance_export', month=month, year=year) }}" class="btn btn-success"><i class="fas fa-file-csv"></i> تصدير CSV</a>
+        <button type="button" class="btn btn-outline" onclick="printPage()"><i class="fas fa-print"></i> طباعة</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-bar" style="color:var(--primary); margin-left:8px;"></i>تقرير حضور {{ ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][month] }} {{ year }}</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if summary %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الموظف</th>
+                        <th>القسم</th>
+                        <th>أيام الحضور</th>
+                        <th>أيام التأخير</th>
+                        <th>أيام الغياب</th>
+                        <th>ساعات إضافية</th>
+                        <th>نسبة الحضور</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in summary %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ item.employee.first_name[0] }}{{ item.employee.last_name[0] if item.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ item.employee.full_name }}</div>
+                                    <div class="emp-id">{{ item.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ item.employee.department.name if item.employee.department else '—' }}</td>
+                        <td class="bold text-success">{{ item.present_days }}</td>
+                        <td class="{% if item.late_days %}text-warning bold{% else %}muted{% endif %}">{{ item.late_days }}</td>
+                        <td class="{% if item.absent_days %}text-danger bold{% else %}muted{% endif %}">{{ item.absent_days }}</td>
+                        <td>{% if item.overtime_hours %}<span class="badge badge-purple">{{ item.overtime_hours }} ساعة</span>{% else %}—{% endif %}</td>
+                        <td>
+                            <div class="flex gap-8" style="align-items:center;">
+                                <div class="progress" style="width:80px;"><div class="progress-bar {% if item.attendance_rate < 60 %}danger{% elif item.attendance_rate < 80 %}warning{% endif %}" style="width: {{ item.attendance_rate }}%"></div></div>
+                                <span class="bold {{ 'text-danger' if item.attendance_rate < 60 else 'text-success' }}">{{ item.attendance_rate }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-chart-bar"></i><h4>لا توجد بيانات</h4></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}طلب إجازة{% endblock %}
+{% block page_title %}تقديم طلب إجازة{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 750px; margin: 0 auto;">
+    <div class="card-header">
+        <h3><i class="fas fa-paper-plane" style="color:var(--warning); margin-left:8px;"></i>طلب إجازة جديد</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>الموظف <span class="required">*</span></label>
+                    <select name="employee_id" class="form-control" required>
+                        <option value="">— اختر الموظف —</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.emp_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>نوع الإجازة <span class="required">*</span></label>
+                    <select name="leave_type_id" class="form-control" required>
+                        <option value="">— اختر النوع —</option>
+                        {% for lt in leave_types %}
+                        <option value="{{ lt.id }}">{{ lt.name }} {% if not lt.paid %}(بدون أجر){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ البدء <span class="required">*</span></label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ النهاية <span class="required">*</span></label>
+                    <input type="date" name="end_date" class="form-control" required>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>سبب الإجازة</label>
+                    <textarea name="reason" class="form-control" rows="3" placeholder="اكتب سبب طلب الإجازة..."></textarea>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="form-help mb-16">
+                <i class="fas fa-lightbulb" style="color:var(--warning);"></i>
+                <b>ملاحظة:</b> سيتم التحقق من رصيد الإجازة تلقائياً عند تقديم الطلب، ولا يحتسب يومي الجمعة والسبت كأيام إجازة.
+            </div>
+
+            <div class="flex gap-12">
+                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> تقديم الطلب</button>
+                <a href="{{ url_for('leaves_list') }}" class="btn btn-outline btn-lg">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

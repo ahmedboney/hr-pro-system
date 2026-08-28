@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}استيراد الحضور{% endblock %}
+{% block page_title %}استيراد بيانات الحضور{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 700px; margin: 0 auto;">
+    <div class="card-header">
+        <h3><i class="fas fa-file-import" style="color:var(--primary); margin-left:8px;"></i>استيراد من ملف</h3>
+    </div>
+    <div class="card-body">
+        <div class="bg-light" style="padding: 16px; border-radius: 10px; margin-bottom: 20px; border-right: 4px solid var(--info);">
+            <div class="bold mb-8" style="color: var(--info);"><i class="fas fa-info-circle"></i> تعليمات الاستيراد</div>
+            <ul style="list-style: none; font-size: 13px; line-height: 2;">
+                <li><i class="fas fa-check text-success"></i> اصدّر البيانات من جهاز البصمة بصيغة CSV أو TXT</li>
+                <li><i class="fas fa-check text-success"></i> التنسيق المدعوم: رقم البصمة ثم الوقت — مثال: <code dir="ltr">1001,2024-01-15 08:05:00</code></li>
+                <li><i class="fas fa-check text-success"></i> يجب أن يكون رقم البصمة مسجلاً على الموظف في النظام</li>
+            </ul>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>نوع التنسيق</label>
+                    <select name="format" class="form-control">
+                        <option value="simplified">بسيط (رقم بصمة, الوقت)</option>
+                        <option value="zkteco">ZKTeco (USERID, VERIFYTIME,...)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الملف <span class="required">*</span></label>
+                    <input type="file" name="file" class="form-control" accept=".csv,.txt" required>
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> استيراد</button>
+                <a href="{{ url_for('attendance_list') }}" class="btn btn-outline">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-24" style="max-width: 700px; margin: 24px auto 0;">
+    <div class="card-header">
+        <h3><i class="fas fa-code-branch" style="color:var(--purple); margin-left:8px;"></i>الربط عبر الواجهة البرمجية (API)</h3>
+    </div>
+    <div class="card-body">
+        <p style="font-size: 13px; margin-bottom: 12px;">يمكن لأجهزة البصمة الذكية إرسال نقرة البصمة مباشرة عبر HTTP POST إلى:</p>
+        <code style="display:block; background:var(--dark); color:#7dd3fc; padding:14px; border-radius:8px; font-size:12px; direction:ltr;">POST http://SERVER-IP:8080/api/fingerprint/punch</code>
+        <p style="font-size: 13px; margin: 12px 0 8px;">محتوى الطلب (JSON):</p>
+        <code style="display:block; background:var(--dark); color:#7dd3fc; padding:14px; border-radius:8px; font-size:12px; direction:ltr;">{"fingerprint_id": "1001", "timestamp": "2024-01-15 08:05:00"}</code>
+    </div>
+</div>
+{% endblock %}

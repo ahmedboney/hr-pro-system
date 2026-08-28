@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}المكافآت والحوافز{% endblock %}
+{% block page_title %}المكافآت والحوافز{% endblock %}
+
+{% block content %}
+<div class="grid grid-2 mb-24">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-award"></i></div>
+        <div class="stat-value">{{ bonuses|length }}</div>
+        <div class="stat-label">إجمالي المكافآت</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-money-bill-trend-up"></i></div>
+        <div class="stat-value">{{ fmt_money(bonuses|sum(attribute='amount')) }}</div>
+        <div class="stat-label">إجمالي قيمة المكافآت</div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <button class="btn btn-primary" onclick="openModal('bonus-modal')" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> تسجيل مكافأة
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-award" style="color:var(--success); margin-left:8px;"></i> سجل المكافآت</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if bonuses %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>النوع</th>
+                        <th>المبلغ</th>
+                        <th>التاريخ</th>
+                        <th>السبب</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bonuses %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ b.employee.first_name[0] }}{{ b.employee.last_name[0] if b.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ b.employee.full_name }}</div>
+                                    <div class="emp-id">{{ b.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ b.bonus_type.name if b.bonus_type else '—' }}</td>
+                        <td class="bold text-success">{{ fmt_money(b.amount) }}</td>
+                        <td>{{ fmt_date(b.date) }}</td>
+                        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.reason or '—' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('bonus_delete', bonus_id=b.id) }}" onsubmit="return confirm('حذف هذه المكافأة؟')">
+                                <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-award"></i><h4>لا توجد مكافآت</h4><p>سجّل مكافأة أو حافزاً لأحد الموظفين</p></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- New bonus modal -->
+<div class="modal-overlay" id="bonus-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>تسجيل مكافأة / حافز</h3>
+            <button class="modal-close" onclick="closeModal('bonus-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('bonus_new') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>الموظف <span class="required">*</span></label>
+                    <select name="employee_id" class="form-control" required>
+                        <option value="">— اختر الموظف —</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.emp_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>نوع المكافأة</label>
+                    <select name="bonus_type_id" class="form-control">
+                        <option value="">— اختر النوع —</option>
+                        {% for bt in bonus_types %}
+                        <option value="{{ bt.id }}">{{ bt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المبلغ <span class="required">*</span></label>
+                    <div class="input-group">
+                        <input type="number" name="amount" step="0.01" class="form-control" placeholder="0.00" required>
+                        <span class="muted small">ج.م</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>السبب</label>
+                    <input type="text" name="reason" class="form-control" placeholder="سبب المكافأة">
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> تسجيل</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('bonus-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

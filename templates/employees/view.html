@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+
+{% block title %}ملف {{ emp.full_name }}{% endblock %}
+{% block page_title %}ملف الموظف{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="profile-header">
+        <div class="profile-avatar">{{ emp.first_name[0] }}{{ emp.last_name[0] if emp.last_name else '' }}</div>
+        <div>
+            <h2 style="font-size: 22px; font-weight: 800;">{{ emp.full_name }}</h2>
+            <div class="flex gap-8 mt-8" style="align-items:center;">
+                {% if emp.status == 'active' %}<span class="badge badge-success"><i class="fas fa-circle"></i> نشط</span>
+                {% elif emp.status == 'on_leave' %}<span class="badge badge-warning">في إجازة</span>
+                {% else %}<span class="badge badge-danger">منتهي خدمته</span>{% endif %}
+                <span class="badge badge-primary">{{ emp.emp_id }}</span>
+                {% if emp.fingerprint_id %}<span class="badge badge-purple"><i class="fas fa-fingerprint"></i> بصمة {{ emp.fingerprint_id }}</span>{% endif %}
+                <span class="muted small"><i class="far fa-calendar-alt"></i> تعيين: {{ fmt_date(emp.hire_date) }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a href="{{ url_for('certificate_experience', emp_id=emp.id) }}" class="btn btn-outline"><i class="fas fa-award"></i> شهادة خبرة</a>
+        <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-outline"><i class="fas fa-edit"></i> تعديل البيانات</a>
+        <a href="#" class="btn btn-danger" onclick="if(confirm('هل أنت متأكد من إنهاء خدمة {{ emp.full_name }}؟')){ document.getElementById('term-form').submit(); }"><i class="fas fa-user-minus"></i> إنهاء الخدمة</a>
+        <form id="term-form" method="POST" action="{{ url_for('employee_delete', emp_id=emp.id) }}" style="display:none;"></form>
+    </div>
+</div>
+
+<div class="grid grid-4">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-primary"><i class="fas fa-money-bill-wave"></i></div>
+        <div class="stat-value">{{ fmt_money(emp.total_salary) }}</div>
+        <div class="stat-label">إجمالي الراتب الشهري</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-user-check"></i></div>
+        <div class="stat-value">{{ total_present }}</div>
+        <div class="stat-label">أيام الحضور</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-clock"></i></div>
+        <div class="stat-value">{{ total_late }}</div>
+        <div class="stat-label">أيام التأخير</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-purple"><i class="fas fa-paper-plane"></i></div>
+        <div class="stat-value">{{ leave_requests|length }}</div>
+        <div class="stat-label">طلبات الإجازة</div>
+    </div>
+</div>
+
+<div class="grid grid-2 mt-24">
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-id-badge" style="color:var(--primary); margin-left:8px;"></i>البيانات الشخصية</h3></div>
+        <div class="card-body">
+            <div class="salary-breakdown">
+                <div class="salary-row"><span>رقم الموظف</span><span class="bold">{{ emp.emp_id }}</span></div>
+                <div class="salary-row"><span>القسم</span><span class="bold">{{ emp.department.name if emp.department else '—' }}</span></div>
+                <div class="salary-row"><span>المسمى الوظيفي</span><span class="bold">{{ emp.position.title if emp.position else '—' }}</span></div>
+                <div class="salary-row"><span>تاريخ الميلاد</span><span class="bold">{{ fmt_date(emp.birth_date) or '—' }}</span></div>
+                <div class="salary-row"><span>الجنس</span><span class="bold">{{ emp.gender or '—' }}</span></div>
+                <div class="salary-row"><span>الحالة الاجتماعية</span><span class="bold">{{ emp.marital_status or '—' }}</span></div>
+                <div class="salary-row"><span>الرقم القومي</span><span class="bold" dir="ltr">{{ emp.national_id or '—' }}</span></div>
+                <div class="salary-row"><span>رقم الهاتف</span><span class="bold" dir="ltr">{{ emp.phone or '—' }}</span></div>
+                <div class="salary-row"><span>البريد الإلكتروني</span><span class="bold" dir="ltr">{{ emp.email or '—' }}</span></div>
+                <div class="salary-row"><span>العنوان</span><span class="bold">{{ emp.address or '—' }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-wallet" style="color:var(--success); margin-left:8px;"></i>البنية الراتبية</h3></div>
+        <div class="card-body">
+            <div class="salary-breakdown">
+                <div class="salary-row"><span>الراتب الأساسي</span><span>{{ fmt_money(emp.base_salary) }}</span></div>
+                <div class="salary-row"><span>بدل السكن</span><span>{{ fmt_money(emp.housing_allowance) }}</span></div>
+                <div class="salary-row"><span>بدل الانتقال</span><span>{{ fmt_money(emp.transport_allowance) }}</span></div>
+                <div class="salary-row"><span>بدل الوجبات</span><span>{{ fmt_money(emp.food_allowance) }}</span></div>
+                <div class="salary-row"><span>بدل الهاتف</span><span>{{ fmt_money(emp.phone_allowance) }}</span></div>
+                <div class="salary-row"><span>بدلات أخرى</span><span>{{ fmt_money(emp.other_allowances) }}</span></div>
+                <div class="salary-row total">
+                    <span>الإجمالي الشهري</span>
+                    <span class="text-success">{{ fmt_money(emp.total_salary) }}</span>
+                </div>
+                <div class="flex gap-12 mt-8">
+                    <div class="bg-light" style="flex:1; padding:10px; border-radius:8px; text-align:center;">
+                        <div class="small muted">قيمة اليوم</div>
+                        <div class="bold">{{ fmt_money(emp.daily_rate) }}</div>
+                    </div>
+                    <div class="bg-light" style="flex:1; padding:10px; border-radius:8px; text-align:center;">
+                        <div class="small muted">قيمة الساعة</div>
+                        <div class="bold">{{ fmt_money(emp.hourly_rate) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2 mt-24">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-plane-departure" style="color:var(--warning); margin-left:8px;"></i>رصيد الإجازات</h3>
+            <a href="{{ url_for('leaves_balances') }}" class="btn btn-outline btn-sm">تفاصيل</a>
+        </div>
+        <div class="card-body">
+            {% if balances %}
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                {% for b in balances %}
+                <div>
+                    <div class="flex-between mb-8">
+                        <span class="bold small">{{ b.leave_type.name }}</span>
+                        <span class="small muted">مستحق {{ b.entitled_days }} | مستخدم {{ b.used_days }} | <span class="bold" style="color:var(--primary);">{{ b.remaining_days }} متبقي</span></span>
+                    </div>
+                    <div class="progress">
+                        {% set pct = (b.used_days / b.entitled_days * 100)|round(0) if b.entitled_days else 0 %}
+                        <div class="progress-bar {% if pct > 80 %}danger{% elif pct > 50 %}warning{% endif %}" style="width: {{ pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-calendar"></i><h4>لا توجد أرصدة</h4></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave" style="color:var(--success); margin-left:8px;"></i>آخر الرواتب</h3>
+            <a href="{{ url_for('payroll_index') }}" class="btn btn-outline btn-sm">الرواتب</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if payroll_records %}
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>الشهر</th><th>إجمالي</th><th>خصومات</th><th>صافي</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                        {% for r in payroll_records %}
+                        <tr>
+                            <td class="bold">{{ r.period.name }}</td>
+                            <td>{{ fmt_money(r.gross_salary) }}</td>
+                            <td class="text-danger">{{ fmt_money(r.total_deductions) }}</td>
+                            <td class="text-success bold">{{ fmt_money(r.net_salary) }}</td>
+                            <td>
+                                {% if r.status == 'paid' %}<span class="badge badge-success">مدفوع</span>
+                                {% else %}<span class="badge badge-warning">قيد المعالجة</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-calculator"></i><h4>لا توجد رواتب بعد</h4></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2 mt-24">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-clipboard-check" style="color:var(--info); margin-left:8px;"></i>آخر الحضور</h3>
+            <a href="{{ url_for('attendance_list') }}" class="btn btn-outline btn-sm">الحضور</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if recent_attendance %}
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>التاريخ</th><th>الحضور</th><th>الانصراف</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                        {% for r in recent_attendance %}
+                        <tr>
+                            <td>{{ r.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ r.check_in_time.strftime('%I:%M %p') if r.check_in_time else '—' }}</td>
+                            <td>{{ r.check_out_time.strftime('%I:%M %p') if r.check_out_time else '—' }}</td>
+                            <td>
+                                {% if r.status == 'present' %}<span class="badge badge-success">حاضر</span>
+                                {% elif r.status == 'late' %}<span class="badge badge-warning">متأخر {{ r.late_minutes }}د</span>
+                                {% else %}<span class="badge badge-danger">{{ r.status }}</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-fingerprint"></i><h4>لا توجد سجلات حضور</h4></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-hand-holding-usd" style="color:var(--purple); margin-left:8px;"></i>السلف والقروض</h3>
+            <a href="{{ url_for('loans_list') }}" class="btn btn-outline btn-sm">الكل</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if loans %}
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>النوع</th><th>المبلغ</th><th>المتبقي</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                        {% for loan in loans %}
+                        <tr>
+                            <td>{% if loan.loan_type == 'savings' %}سلفة{% else %}قرض{% endif %}</td>
+                            <td>{{ fmt_money(loan.amount) }}</td>
+                            <td class="bold">{{ fmt_money(loan.remaining_amount) }}</td>
+                            <td>
+                                {% if loan.status == 'active' %}<span class="badge badge-warning">نشط</span>
+                                {% elif loan.status == 'paid' %}<span class="badge badge-success">مسدد</span>
+                                {% else %}<span class="badge badge-gray">ملغي</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-coins"></i><h4>لا توجد سلف</h4></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

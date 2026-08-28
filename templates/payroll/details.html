@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}رواتب فترة {{ period.name }}{% endblock %}
+{% block page_title %}رواتب فترة {{ period.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="flex gap-12" style="align-items:center;">
+        <span class="badge {% if period.status == 'active' %}badge-primary{% elif period.status == 'processed' %}badge-warning{% else %}badge-success{% endif %}" style="font-size:13px;">
+            {{ {'active':'نشطة','processed':'تم الاحتساب','closed':'مغلقة'}[period.status] }}
+        </span>
+        <span class="muted small">من {{ fmt_date(period.start_date) }} إلى {{ fmt_date(period.end_date) }}</span>
+    </div>
+    <div class="actions">
+        {% if period.status != 'closed' %}
+        <form method="POST" action="{{ url_for('payroll_process', period_id=period.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> احتساب الرواتب</button>
+        </form>
+        {% endif %}
+        <button type="button" class="btn btn-outline" onclick="printPage()"><i class="fas fa-print"></i> طباعة</button>
+        <a href="{{ url_for('export_payroll_pdf', period_id=period.id) }}" class="btn btn-outline">
+            <i class="fas fa-file-pdf" style="color:var(--danger);"></i> كشف PDF
+        </a>
+        <a href="{{ url_for('export_payroll_xlsx', period_id=period.id) }}" class="btn btn-outline">
+            <i class="fas fa-file-excel" style="color:var(--success);"></i> كشف Excel
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-3 mb-24">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-primary"><i class="fas fa-users"></i></div>
+        <div class="stat-value">{{ records|length }}</div>
+        <div class="stat-label">عدد الموظفين</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-money-bill-1"></i></div>
+        <div class="stat-value">{{ fmt_money(records|sum(attribute='gross_salary')) }}</div>
+        <div class="stat-label">إجمالي الرواتب الإجمالية</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-cash-register"></i></div>
+        <div class="stat-value">{{ fmt_money(records|sum(attribute='net_salary')) }}</div>
+        <div class="stat-label">صافي الرواتب المستحقة</div>
+    </div>
+</div>
+
+<!-- Process modal -->
+<div class="modal-overlay" id="process-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>احتساب رواتب فترة {{ period.name }}</h3>
+            <button class="modal-close" onclick="closeModal('process-modal')">&times;</button>
+        </div>
+        <p class="muted mb-16" style="font-size:13px;">اختر الموظفين ليتم احتساب رواتبهم (الموظف النشط محدد افتراضياً):</p>
+        <form method="POST" action="{{ url_for('payroll_process', period_id=period.id) }}">
+            <div style="max-height: 350px; overflow-y: auto; border:1px solid var(--border); border-radius:8px; padding:8px;">
+                {% for emp in employees %}
+                {% set has_rec = records|selectattr('employee_id', 'equalto', emp.id)|first %}
+                <label style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:6px; cursor:pointer; transition:background 0.2s;">
+                    <input type="checkbox" name="employee_ids" value="{{ emp.id }}" {% if not has_rec %}checked{% endif %}>
+                    <div class="emp-cell">
+                        <div class="emp-avatar" style="width:30px; height:30px; font-size:11px;">{{ emp.first_name[0] }}{{ emp.last_name[0] if emp.last_name else '' }}</div>
+                        <div>
+                            <div class="emp-name" style="font-size:13px;">{{ emp.full_name }}</div>
+                            <div class="emp-id">{{ fmt_money(emp.total_salary) }}</div>
+                        </div>
+                    </div>
+                    {% if has_rec %}<span class="badge badge-success" style="margin-right:auto;">محسوب</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> احتساب</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('process-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if records %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-list-alt" style="color:var(--primary); margin-left:8px;"></i> سجلات الرواتب</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>إجمالي</th>
+                        <th>خصومات</th>
+                        <th>صافي</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ r.employee.first_name[0] }}{{ r.employee.last_name[0] if r.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ r.employee.full_name }}</div>
+                                    <div class="emp-id">{{ r.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="bold">{{ fmt_money(r.gross_salary) }}</td>
+                        <td class="text-danger bold">{{ fmt_money(r.total_deductions) }}</td>
+                        <td class="text-success bold" style="font-size:15px;">{{ fmt_money(r.net_salary) }}</td>
+                        <td>
+                            {% if r.status == 'paid' %}<span class="badge badge-success">مدفوع</span>
+                            {% else %}<span class="badge badge-warning">غير مدفوع</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="flex gap-8">
+                                <a href="{{ url_for('payslip_view', record_id=r.id) }}" class="btn btn-sm btn-outline" title="كشف الراتب"><i class="fas fa-file-invoice"></i></a>
+                                <button class="btn btn-sm btn-outline" onclick="openModal('edit-rec-{{ r.id }}')" title="تعديل"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Edit record modal -->
+                    <div class="modal-overlay" id="edit-rec-{{ r.id }}">
+                        <div class="modal modal-lg">
+                            <div class="modal-header">
+                                <h3>تفاصيل راتب {{ r.employee.full_name }}</h3>
+                                <button class="modal-close" onclick="closeModal('edit-rec-{{ r.id }}')">&times;</button>
+                            </div>
+                            <form method="POST" action="{{ url_for('payroll_record_update', period_id=period.id, record_id=r.id) }}">
+                                <div class="grid grid-2">
+                                    <div class="salary-breakdown" style="border-left: 1px solid var(--light-2); padding-left: 16px;">
+                                        <h4 class="mb-8 text-primary bold" style="font-size:13px;"><i class="fas fa-arrow-down"></i> الإضافات</h4>
+                                        <div class="salary-row"><span>الراتب الأساسي</span><span>{{ fmt_money(r.base_salary) }}</span></div>
+                                        <div class="salary-row"><span>بدل السكن</span><span>{{ fmt_money(r.housing_allowance) }}</span></div>
+                                        <div class="salary-row"><span>بدل الانتقال</span><span>{{ fmt_money(r.transport_allowance) }}</span></div>
+                                        <div class="salary-row"><span>بدل الوجبات</span><span>{{ fmt_money(r.food_allowance) }}</span></div>
+                                        <div class="salary-row"><span>بدل الهاتف</span><span>{{ fmt_money(r.phone_allowance) }}</span></div>
+                                        <div class="salary-row"><span>بدلات أخرى</span><span>{{ fmt_money(r.other_allowances) }}</span></div>
+                                        <div class="salary-row"><span>عمل إضافي</span><span class="text-success">{{ fmt_money(r.overtime_amount) }}</span></div>
+                                        <div class="salary-row"><span>مكافآت</span><span class="text-success">{{ fmt_money(r.bonus_amount) }}</span></div>
+                                    </div>
+                                    <div class="salary-breakdown">
+                                        <h4 class="mb-8 text-danger bold" style="font-size:13px;"><i class="fas fa-arrow-up"></i> الخصومات</h4>
+                                        <div class="salary-row"><span>غياب ({{ r.absent_days }} يوم)</span><span class="text-danger">{{ fmt_money(r.absent_deduction) }}</span></div>
+                                        <div class="salary-row"><span>تأخير ({{ r.late_minutes_total }} دقيقة)</span><span class="text-danger">{{ fmt_money(r.late_deduction) }}</span></div>
+                                        <div class="salary-row"><span>إجازة بدون أجر ({{ r.unpaid_leave_days }} يوم)</span><span class="text-danger">{{ fmt_money(r.unpaid_leave_deduction) }}</span></div>
+                                        <div class="salary-row"><span>تأمينات اجتماعية</span><span class="text-danger">{{ fmt_money(r.social_insurance) }}</span></div>
+                                        <div class="salary-row"><span>ضرائب</span><span class="text-danger">{{ fmt_money(r.tax_amount) }}</span></div>
+                                        <div class="salary-row"><span>أقساط القروض</span><span class="text-danger">{{ fmt_money(r.loan_deduction) }}</span></div>
+                                        <div class="form-group mt-8">
+                                            <label>خصومات أخرى</label>
+                                            <div class="input-group">
+                                                <input type="number" name="other_deductions" step="0.01" class="form-control" value="{{ r.other_deductions or 0 }}">
+                                                <span class="muted small">ج.م</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="divider"></div>
+                                <div class="flex-between">
+                                    <div class="salary-row total">
+                                        <span>الصافي المستحق</span>
+                                        <span class="text-success" style="font-size:18px;">{{ fmt_money(r.net_salary) }} ج.م</span>
+                                    </div>
+                                    <div class="form-group" style="min-width: 250px;">
+                                        <label>ملاحظات</label>
+                                        <input type="text" name="notes" class="form-control" value="{{ r.notes or '' }}">
+                                    </div>
+                                </div>
+                                <div class="flex gap-8 mt-16">
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+                                    <button type="button" class="btn btn-outline" onclick="closeModal('edit-rec-{{ r.id }}')">إغلاق</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if period.status != 'closed' and records|selectattr('status', 'equalto', 'pending')|list %}
+<div class="card mt-24" style="border-right: 4px solid var(--success);">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('payroll_mark_paid', period_id=period.id) }}">
+            <input type="hidden" name="record_ids" value="{% for r in records if r.status != 'paid' %}{{ r.id }}{% if not loop.last %},{% endif %}{% endfor %}">
+            <div class="flex-between">
+                <div>
+                    <div class="bold text-success" style="font-size:15px;"><i class="fas fa-hand-holding-dollar"></i> صرف الرواتب</div>
+                    <div class="small muted">بعد التأكد من كل الرواتب، اضغط لتسجيل الصرف وإغلاق الفترة</div>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('هل أنت متأكد من صرف جميع الرواتب في هذه الفترة وإغلاقها؟')">
+                    <i class="fas fa-cash-register"></i> صرف الرواتب وإغلاق الفترة
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="fas fa-calculator"></i>
+            <h4>لم يتم احتساب رواتب هذه الفترة بعد</h4>
+            <p>اضغط "احتساب الرواتب" لبدء الاحتساب التلقائي بناءً على بيانات الحضور والإجازات</p>
+            <button class="btn btn-primary btn-lg mt-16" onclick="openModal('process-modal')"><i class="fas fa-calculator"></i> احتساب الرواتب الآن</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

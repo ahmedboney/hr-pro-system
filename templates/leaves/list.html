@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}الإجازات{% endblock %}
+{% block page_title %}طلبات الإجازات{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" class="flex gap-8" style="align-items:center;">
+        <select name="status" class="form-control" onchange="this.form.submit()">
+            <option value="">كل الحالات</option>
+            <option value="pending" {% if status == 'pending' %}selected{% endif %}>معلقة</option>
+            <option value="approved" {% if status == 'approved' %}selected{% endif %}>موافقة</option>
+            <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>مرفوضة</option>
+            <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>ملغاة</option>
+        </select>
+        <select name="year" class="form-control" onchange="this.form.submit()">
+            {% for y in range(2023, 2031) %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <div class="flex gap-8">
+        <a href="{{ url_for('leaves_balances') }}" class="btn btn-outline"><i class="fas fa-scale-balanced"></i> أرصدة الإجازات</a>
+        <a href="{{ url_for('leave_request') }}" class="btn btn-primary"><i class="fas fa-plus"></i> طلب إجازة</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-plane-departure" style="color:var(--warning); margin-left:8px;"></i> الطلبات ({{ requests|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if requests %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>نوع الإجازة</th>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>الأيام</th>
+                        <th>سبب</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ req.employee.first_name[0] }}{{ req.employee.last_name[0] if req.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ req.employee.full_name }}</div>
+                                    <div class="emp-id">{{ req.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:{{ req.leave_type.color }}; margin-left:6px;"></span>
+                            {{ req.leave_type.name }}
+                            {% if not req.leave_type.paid %}<span class="badge badge-gray">بدون أجر</span>{% endif %}
+                        </td>
+                        <td>{{ req.start_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ req.end_date.strftime('%Y-%m-%d') }}</td>
+                        <td><span class="badge badge-primary">{{ req.days_count }} يوم</span></td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ req.reason or '—' }}</td>
+                        <td>
+                            {% if req.status == 'pending' %}<span class="badge badge-warning"><i class="fas fa-hourglass-half"></i> معلقة</span>
+                            {% elif req.status == 'approved' %}<span class="badge badge-success"><i class="fas fa-check-circle"></i> موافقة</span>
+                            {% elif req.status == 'rejected' %}<span class="badge badge-danger"><i class="fas fa-times-circle"></i> مرفوضة</span>
+                            {% else %}<span class="badge badge-gray">ملغاة</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'pending' %}
+                            <div class="flex gap-8">
+                                <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="btn btn-sm btn-success" title="موافقة"><i class="fas fa-check"></i></button>
+                                </form>
+                                <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="رفض"><i class="fas fa-times"></i></button>
+                                </form>
+                                <button class="btn btn-sm btn-outline" onclick="openModal('review-{{ req.id }}')" title="اعتماد مع ملاحظات"><i class="fas fa-stamp"></i></button>
+                            </div>
+                            {% elif req.status == 'approved' %}
+                            <a href="{{ url_for('certificate_leave', req_id=req.id) }}" class="btn btn-sm btn-outline" title="شهادة إجازة"><i class="fas fa-scroll"></i></a>
+                            {% endif %}
+
+                            <div class="modal-overlay" id="review-{{ req.id }}">
+                                <div class="modal">
+                                    <div class="modal-header">
+                                        <h3>اعتماد طلب إجازة — {{ req.employee.full_name }}</h3>
+                                        <button class="modal-close" onclick="closeModal('review-{{ req.id }}')">&times;</button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+                                        <div class="form-group">
+                                            <label>القرار</label>
+                                            <select name="action" class="form-control">
+                                                <option value="approve">موافقة</option>
+                                                <option value="reject">رفض</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group mt-16">
+                                            <label>ملاحظات</label>
+                                            <textarea name="notes" class="form-control" placeholder="أي ملاحظات على القرار..."></textarea>
+                                        </div>
+                                        <div class="flex gap-8 mt-16">
+                                            <button type="submit" class="btn btn-primary"><i class="fas fa-stamp"></i> اعتماد</button>
+                                            <button type="button" class="btn btn-outline" onclick="closeModal('review-{{ req.id }}')">إلغاء</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="muted small">{{ req.review_notes or '' }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-plane-departure"></i><h4>لا توجد طلبات إجازات</h4><p>أنشئ طلب إجازة جديد من الزر أعلاه</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

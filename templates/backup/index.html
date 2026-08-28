@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}النسخ الاحتياطي{% endblock %}
+{% block page_title %}النسخ الاحتياطي لقاعدة البيانات{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-database" style="color:var(--primary); margin-left:8px;"></i>إجراء نسخة احتياطية</h3>
+        </div>
+        <div class="card-body">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div class="info-box" style="border-right:3px solid var(--primary); padding:12px 14px; background:var(--bg-2); border-radius:8px;">
+                    <div class="flex-between">
+                        <span class="bold"><i class="fas fa-file-database"></i> قاعدة البيانات الحالية</span>
+                        <span class="badge badge-primary">{{ (db_size / 1024)|round(1) if db_size else 0 }} KB</span>
+                    </div>
+                    <p class="form-help mt-8" style="margin:0;">
+                        نصيحة: نسخة يومية تلقائية تُنشأ كل يوم في الثانية 2:00 صباحاً، ويمكنك أيضاً إنشاء نسخة يدوية في أي وقت.
+                    </p>
+                </div>
+                <form method="POST" action="{{ url_for('backup_create') }}">
+                    <div class="form-row" style="gap:10px;">
+                        <input type="text" name="notes" class="form-control" placeholder="ملاحظة اختيارية (مثال: قبل تعديل الرواتب)" style="flex:1;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> نسخ احتياطي الآن
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-clock-rotate-left" style="color:var(--warning); margin-left:8px;"></i>آخر نسخة احتياطية</h3>
+        </div>
+        <div class="card-body">
+            {% if last_backup %}
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div class="flex-between">
+                    <span class="bold"><i class="fas fa-file-zipper"></i> {{ last_backup.filename }}</span>
+                    <span class="badge badge-success">متوفرة</span>
+                </div>
+                <div class="form-help">
+                    الحجم: {{ (last_backup.size / 1024)|round(1) }} KB — التوقيت: {{ last_backup.date }} {{ last_backup.time }}
+                </div>
+                <div style="display:flex; gap:8px; margin-top:6px;">
+                    <a href="{{ url_for('backup_download', filename=last_backup.filename) }}" class="btn btn-sm btn-outline">
+                        <i class="fas fa-download"></i> تحميل
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-database"></i>
+                <h4>لا توجد نسخ بعد</h4>
+                <p>أنشئ أول نسخة احتياطية من الزر المجاور</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card mt-24">
+    <div class="card-header">
+        <h3><i class="fas fa-clock-rotate-left" style="color:var(--purple); margin-left:8px;"></i>سجل النسخ الاحتياطية</h3>
+        <span class="badge badge-gray">{{ backups|length }} نسخة</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if backups %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الملف</th>
+                        <th>الحجم</th>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backups %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="bold" style="direction:ltr; text-align:right; font-size:12px;">{{ b.filename }}</td>
+                        <td>{{ (b.size / 1024)|round(1) }} KB</td>
+                        <td>{{ b.date }}</td>
+                        <td>{{ b.time }}</td>
+                        <td>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <a href="{{ url_for('backup_download', filename=b.filename) }}" class="btn btn-sm btn-outline" title="تحميل">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('backup_restore', filename=b.filename) }}" onsubmit="return confirm('سيتم استبدال قاعدة البيانات الحالية بهذه النسخة. هل أنت متأكد؟')" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-warning" title="استعادة">
+                                        <i class="fas fa-rotate-left"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('backup_delete', filename=b.filename) }}" onsubmit="return confirm('حذف هذه النسخة نهائياً؟')" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <h4>لا توجد نسخ احتياطية حتى الآن</h4>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<p class="form-help mt-16">
+    <i class="fas fa-shield-halved"></i>
+    النظام يحتفظ تلقائياً بآخر 30 نسخة احتياطية، ويُنشئ نسخة يومية تلقائية.
+    النسخ الاحتياطية تحفظ سرية بياناتك داخل مجلد <code>backups</code> على نفس الجهاز.
+</p>
+{% endblock %}

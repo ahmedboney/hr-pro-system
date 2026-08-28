@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}الموظفون{% endblock %}
+{% block page_title %}قائمة الموظفين{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" class="flex gap-8" style="flex:1; flex-wrap:wrap; align-items:center;">
+        <div class="form-group">
+            <i class="fas fa-search" style="color:var(--text-3);"></i>
+            <input type="text" name="q" class="form-control" placeholder="بحث برقم الموظف، الاسم، رقم البصمة..." value="{{ q }}" style="min-width: 260px;">
+        </div>
+        <div class="form-group">
+            <select name="dept" class="form-control" onchange="this.form.submit()">
+                <option value="">كل الأقسام</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {% if dept_id|string == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>على رأس العمل</option>
+                <option value="on_leave" {% if status == 'on_leave' %}selected{% endif %}>في إجازة</option>
+                <option value="terminated" {% if status == 'terminated' %}selected{% endif %}>منتهي خدمته</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">بحث</button>
+        <a href="{{ url_for('employees_list') }}" class="btn btn-outline btn-sm">إعادة تعيين</a>
+    </form>
+    <a href="{{ url_for('export_employees_xlsx') }}" class="btn btn-outline">
+        <i class="fas fa-file-excel" style="color:var(--success);"></i> تصدير Excel
+    </a>
+    <a href="{{ url_for('employee_new') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus"></i> موظف جديد
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-users" style="color:var(--primary); margin-left:8px;"></i> الموظفون ({{ employees|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if employees %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>القسم</th>
+                        <th>الوظيفة</th>
+                        <th>رقم البصمة</th>
+                        <th>الهاتف</th>
+                        <th>نوع التعيين</th>
+                        <th>إجمالي الراتب</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ emp.first_name[0] }}{{ emp.last_name[0] if emp.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ emp.full_name }}</div>
+                                    <div class="emp-id">{{ emp.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ emp.department.name if emp.department else '<span class="muted">—</span>'|safe }}</td>
+                        <td>{{ emp.position.title if emp.position else '—' }}</td>
+                        <td>
+                            {% if emp.fingerprint_id %}
+                            <span class="badge badge-purple"><i class="fas fa-fingerprint"></i> {{ emp.fingerprint_id }}</span>
+                            {% else %}
+                            <span class="badge badge-gray">غير مسجل</span>
+                            {% endif %}
+                        </td>
+                        <td dir="ltr">{{ emp.phone or '—' }}</td>
+                        <td>
+                            {% if emp.employment_type == 'full_time' %}<span class="badge badge-primary">دوام كامل</span>
+                            {% elif emp.employment_type == 'part_time' %}<span class="badge badge-info">دوام جزئي</span>
+                            {% else %}<span class="badge badge-gray">{{ emp.employment_type }}</span>{% endif %}
+                        </td>
+                        <td class="bold">{{ fmt_money(emp.total_salary) }}</td>
+                        <td>
+                            {% if emp.status == 'active' %}<span class="badge badge-success"><i class="fas fa-circle"></i> نشط</span>
+                            {% elif emp.status == 'on_leave' %}<span class="badge badge-warning">في إجازة</span>
+                            {% else %}<span class="badge badge-danger">منتهي</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="flex gap-8">
+                                <a href="{{ url_for('employee_view', emp_id=emp.id) }}" class="btn btn-sm btn-outline" title="عرض الملف"><i class="fas fa-eye"></i></a>
+                                <a href="{{ url_for('employee_edit', emp_id=emp.id) }}" class="btn btn-sm btn-outline" title="تعديل"><i class="fas fa-edit"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users-slash"></i>
+            <h4>لا يوجد موظفون</h4>
+            <p>ابدأ بإضافة أول موظف في النظام</p>
+            <a href="{{ url_for('employee_new') }}" class="btn btn-primary btn-sm mt-16"><i class="fas fa-user-plus"></i> إضافة موظف</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

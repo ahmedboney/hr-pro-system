@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+
+{% block title %}دليل الاستخدام{% endblock %}
+{% block page_title %}دليل الاستخدام الشامل{% endblock %}
+
+{% block content %}
+<div class="guide-toolbar card no-print">
+    <div class="guide-toolbar-inner">
+        <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> طباعة الدليل</button>
+        <a class="btn btn-outline" href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> لوحة التحكم</a>
+        <span class="muted small">حقوق الملكية محفوظة © {{ today.year }} — محاسب / أحمد عبدالله</span>
+    </div>
+</div>
+
+<div class="guide-layout">
+    <!-- جدول المحتويات -->
+    <aside class="guide-toc card no-print">
+        <h3><i class="fas fa-list-ul"></i> محتويات الدليل</h3>
+        <nav>
+            <a href="#sec-intro">1. نظرة عامة على النظام</a>
+            <a href="#sec-run">2. تشغيل وإيقاف النظام</a>
+            <a href="#sec-dashboard">3. لوحة التحكم</a>
+            <a href="#sec-attendance">4. الحضور والانصراف</a>
+            <a href="#sec-devices">5. أجهزة البصمة</a>
+            <a href="#sec-employees">6. إدارة الموظفين</a>
+            <a href="#sec-org">7. الأقسام والمسميات الوظيفية</a>
+            <a href="#sec-leaves">8. الإجازات والأرصدة</a>
+            <a href="#sec-payroll">9. الرواتب والأجور</a>
+            <a href="#sec-loans">10. السلف والقروض</a>
+            <a href="#sec-bonuses">11. المكافآت والحوافز</a>
+            <a href="#sec-reports">12. التقارير والتصدير (Excel / PDF)</a>
+            <a href="#sec-certificates">13. الشهادات الرسمية</a>
+            <a href="#sec-insurance">14. التأمينات والضرائب</a>
+            <a href="#sec-settings">15. الإعدادات العامة</a>
+            <a href="#sec-users">16. مستخدمو النظام</a>
+            <a href="#sec-api">17. ربط الجهاز عبر API الآمن</a>
+            <a href="#sec-backup">18. النسخ الاحتياطي والاستعادة</a>
+            <a href="#sec-smart">19. التنبيهات الذكية والغياب التلقائي</a>
+            <a href="#sec-security">20. الأمان والحماية</a>
+            <a href="#sec-faq">21. استكشاف الأخطاء</a>
+            <a href="#sec-copyright">22. حقوق الملكية</a>
+        </nav>
+    </aside>
+
+    <!-- محتوى الدليل -->
+    <div class="guide-content">
+
+        <section id="sec-intro" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">1</span>
+                <h2>نظرة عامة على النظام</h2>
+            </div>
+            <div class="card-body">
+                <p>نظام الموارد البشرية المتكامل (HR Pro System) برنامج عربي متكامل لإدارة شؤون العاملين يغطي:</p>
+                <ul class="guide-list">
+                    <li><i class="fas fa-fingerprint"></i> <b>الحضور والانصراف</b> عبر أجهزة البصمة (ZK-Teco) أو المحاكاة أو الاستيراد.</li>
+                    <li><i class="fas fa-users"></i> <b>إدارة الموظفين</b> الكاملة (بيانات شخصية، وظيفية، مالية).</li>
+                    <li><i class="fas fa-plane-departure"></i> <b>الإجازات</b> بكل أنواعها مع نظام أرصدة ذكي.</li>
+                    <li><i class="fas fa-money-bill-wave"></i> <b>الرواتب والأجور</b> احتساب آلي مع الخصومات والبدلات.</li>
+                    <li><i class="fas fa-hand-holding-usd"></i> <b>السلف والقروض</b> وتقسيطها على الرواتب.</li>
+                    <li><i class="fas fa-award"></i> <b>المكافآت والحوافز</b>.</li>
+                    <li><i class="fas fa-chart-pie"></i> <b>تقارير وإحصائيات</b> وتصدير Excel منسق باحترافية.</li>
+                </ul>
+                <p class="guide-note"><i class="fas fa-lightbulb"></i> النظام يعمل محلياً على جهازك بدون إنترنت ودون ظهور نافذة سوداء، ويتم الدخول إليه من خلال المتصفح مباشرة فيفتح تلقائياً بصلاحية <b>مدير النظام</b> دون الحاجة إلى تسجيل دخول.</p>
+            </div>
+        </section>
+
+        <section id="sec-run" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">2</span>
+                <h2>تشغيل وإيقاف النظام</h2>
+            </div>
+            <div class="card-body">
+                <h4>تشغيل النظام</h4>
+                <ol class="guide-list">
+                    <li>افتح مجلد النظام: <code>Desktop\بصمة</code></li>
+                    <li>انقر نقرة مزدوجة على الملف <button class="btn btn-success btn-sm" onclick="event.preventDefault()"><i class="fab fa-windows"></i> start.bat</button> أو <code>start.vbs</code></li>
+                    <li>سيُفتح المتصفح تلقائياً على: <code>http://127.0.0.1:8080</code></li>
+                    <li>لا تظهر أي نافذة سوداء، والنظام يعمل في الخلفية بصمت.</li>
+                </ol>
+                <h4>إيقاف النظام</h4>
+                <ol class="guide-list">
+                    <li>انقر مزدوجاً على ملف <code>stop.vbs</code> لإيقاف الخادم.</li>
+                    <li>أو أغلق من إدارة المهام عملية <code>pythonw.exe</code>.</li>
+                </ol>
+                <h4>العنوان والمنفذ</h4>
+                <p>يمكن الوصول من أي جهاز في نفس الشبكة عبر: <code>http://عنوان-الجهاز:8080</code></p>
+                <div class="guide-callout">
+                    <i class="fas fa-info-circle"></i>
+                    <div><b>ملاحظة:</b> النظام يعمل على المنفذ <b>8080</b>. كلمة مرور المستخدم الافتراضية admin: <code>admin123</code> (تستخدم فقط لتغيير الصلاحيات، والدخول تلقائي).</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-dashboard" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">3</span>
+                <h2>لوحة التحكم</h2>
+            </div>
+            <div class="card-body">
+                <p>تظهر عند فتح النظام وتعرض نبذة فورية عن حالة الشركة:</p>
+                <ul class="guide-list">
+                    <li>عدد الموظفين النشطين والأقسام.</li>
+                    <li>الحاضرون والغائبون والمتأخرون اليوم.</li>
+                    <li>طلبات الإجازات المعلقة والمستحقات الشهرية.</li>
+                    <li>أحدث حركات الحضور والانصراف.</li>
+                    <li>توزيع الموظفين على الأقسام وحالة آخر فترة رواتب.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-attendance" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">4</span>
+                <h2>الحضور والانصراف</h2>
+            </div>
+            <div class="card-body">
+                <p>يتم تسجيل الحضور بأربع طرق مختلفة:</p>
+                <h4>أولاً: جهاز البصمة الحقيقي (ZK-Teco)</h4>
+                <ol class="guide-list">
+                    <li>من قائمة <b>أجهزة البصمة</b> أضف الجهاز باسمه وعنوان IP.</li>
+                    <li>تأكد أن الجهاز موصول على نفس الشبكة (منفذ 4370).</li>
+                    <li>افتح الجهاز من القائمة واضغط <b>مزامنة</b> لتسحب سجلات الحضور.</li>
+                </ol>
+                <h4>ثانياً: محاكاة البصمة (للتجربة)</h4>
+                <ol class="guide-list">
+                    <li>من <b>أجهزة البصمة ← محاكاة بصمة</b>.</li>
+                    <li>اختر رقم البصمة واضغط تسجيل، فيُسجل حضور/انصراف تلقائياً حسب الوقت.</li>
+                </ol>
+                <h4>ثالثاً: إدخال يدوي</h4>
+                <ol class="guide-list">
+                    <li>من صفحة <b>الحضور والانصراف</b> اختر الموظف واليوم والساعة.</li>
+                    <li>اضغط <b>تسجيل حضور</b> أو <b>تسجيل انصراف</b>.</li>
+                </ol>
+                <h4>رابعاً: استيراد ملف من الجهاز</h4>
+                <ol class="guide-list">
+                    <li>صدّر سجلات الجهاز بصيغة CSV ثم اختر <b>استيراد</b> من صفحة الحضور.</li>
+                    <li>يتعرف النظام تلقائياً على رقم البصمة ويسجل الحضور.</li>
+                </ol>
+                <p class="guide-note"><i class="fas fa-lightbulb"></i> النظام يحسب تلقائياً <b>التأخير</b> و<b>الغياب</b> و<b>ساعات العمل الإضافية</b> بناءً على إعدادات مواعيد العمل بالشركة.</p>
+            </div>
+        </section>
+
+        <section id="sec-devices" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">5</span>
+                <h2>أجهزة البصمة وطرق ربطها</h2>
+            </div>
+            <div class="card-body">
+                <p>يدعم النظام ربط أجهزة البصمة بثلاث طرق:</p>
+                <ul class="guide-list">
+                    <li><b>ZK-Teco مباشر</b>: الاتصال المباشر بالجهاز عبر الشبكة (منفذ 4370) لسحب السجلات.</li>
+                    <li><b>HTTP / Webhook</b>: الجهاز أو البرنامج الوسيط يرسل النقرة مباشرة إلى النظام (انظر قسم API).</li>
+                    <li><b>TCP</b>: استقبال البيانات عبر سوكيت TCP مخصص للأنظمة المتوسطة.</li>
+                    <li><b>محاكاة</b>: للتدريب والتجربة بدون جهاز.</li>
+                </ul>
+                <div class="guide-callout">
+                    <i class="fas fa-info-circle"></i>
+                    <div><b>ربط سريع:</b> من <b>أجهزة البصمة ← إضافة جهاز</b> أدخل: الاسم، عنوان IP الخاص بالجهاز، نوع الجهاز (ZK-Teco)، ثم اضغط حفظ. في قائمة الأجهزة اضغط <b>مزامنة الآن</b>.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-employees" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">6</span>
+                <h2>إدارة الموظفين</h2>
+            </div>
+            <div class="card-body">
+                <h4>إضافة موظف جديد</h4>
+                <ol class="guide-list">
+                    <li>من قائمة <b>الموظفون ← إضافة موظف</b>.</li>
+                    <li>أدخل البيانات الشخصية والوظيفية.</li>
+                    <li>أدخل <b>رقم البصمة</b> الخاص بالموظف على الجهاز (مثال: 1001).</li>
+                    <li>حدد القسم والمسمى الوظيفي ونوع التعيين.</li>
+                    <li>أدخل الراتب الأساسي والبدلات (سكن، انتقال، وجبات، هاتف).</li>
+                    <li>اضغط حفظ، وسيُنشئ النظام تلقائياً أرصدة الإجازات للسنة.</li>
+                </ol>
+                <h4>عرض ملف الموظف</h4>
+                <p>اضغط على اسم الموظف لرؤية الملف الكامل: الأرصدة، الإجازات، الحضور، السلف، المكافآت وكشوف الرواتب السابقة.</p>
+                <h4>إنهاء خدمة</h4>
+                <p>من زر "إنهاء الخدمة" لتغيير الحالة إلى منتهي دون حذف السجلات التاريخية.</p>
+            </div>
+        </section>
+
+        <section id="sec-org" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">7</span>
+                <h2>الأقسام والمسميات الوظيفية</h2>
+            </div>
+            <div class="card-body">
+                <ul class="guide-list">
+                    <li><b>الأقسام:</b> من قائمة الأقسام يمكن إضافة وتعديل الأقسام وتعيين مدير لكل قسم. لا يمكن حذف قسم به موظفين.</li>
+                    <li><b>المسميات الوظيفية:</b> من قائمة المسميات إضافة وظائف الشركة. لا يمكن حذف وظيفة لها موظفون.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-leaves" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">8</span>
+                <h2>الإجازات والأرصدة</h2>
+            </div>
+            <div class="card-body">
+                <h4>تقديم طلب إجازة</h4>
+                <ol class="guide-list">
+                    <li>من <b>الإجازات ← طلب إجازة</b>.</li>
+                    <li>اختر الموظف ونوع الإجازة (سنوية، مرضية، طارئة...).</li>
+                    <li>حدد من/إلى مع ذكر السبب.</li>
+                    <li>يرفض النظام الطلب تلقائياً إذا تجاوز الرصيد المتاح.</li>
+                </ol>
+                <h4>الموافقة والرفض</h4>
+                <p>من قائمة الإجازات اضغط <b>موافقة</b> أو <b>رفض</b>. عند الموافقة يُخصم من رصيد الموظف تلقائياً.</p>
+                <h4>الأرصدة</h4>
+                <p>صفحة <b>أرصدة الإجازات</b> تعرض لكل موظف: المستحق والمسحوب والمتبقي لكل نوع.</p>
+                <div class="guide-callout">
+                    <i class="fas fa-info-circle"></i>
+                    <div>أرصدة السنة الجديدة تُنشأ تلقائياً عند إضافة موظف، ويمكن تعديل المدد المستحقة من <b>الإعدادات</b>.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-payroll" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">9</span>
+                <h2>الرواتب والأجور</h2>
+            </div>
+            <div class="card-body">
+                <h4>خطوات احتساب الرواتب الشهرية</h4>
+                <ol class="guide-list">
+                    <li>من <b>الرواتب والأجور</b> اختر الفترة الشهرية (تُنشأ تلقائياً).</li>
+                    <li>اضغط <b>احتساب الرواتب</b>.</li>
+                    <li>يحتسب النظام لكل موظف: الراتب الأساسي + البدلات + ساعات إضافية + مكافآت.</li>
+                    <li>يخصم: الغياب، التأخير، التأمينات، ضريبة كسب العمل، أقساط السلف.</li>
+                    <li>يمكنك تعديل أي خصم إضافي لكل موظف يدوياً ثم <b>حفظ</b>.</li>
+                    <li>اضغط <b>صرف</b> لتعليم الرواتب كمدفوعة وتسجيل أقساط السلف.</li>
+                </ol>
+                <h4>كشف الراتب (Payslip)</h4>
+                <p>اضغط على <b>عرض كشف الراتب</b> لأي موظف لفتح كشف راتب منسق قابل للطباعة والتوقيع والتحويل لـ Excel.</p>
+            </div>
+        </section>
+
+        <section id="sec-loans" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">10</span>
+                <h2>السلف والقروض</h2>
+            </div>
+            <div class="card-body">
+                <ol class="guide-list">
+                    <li>من <b>السلف والقروض</b> اضغط <b>سلفة جديدة</b>.</li>
+                    <li>اختر الموظف، المبلغ، عدد الأقساط والسبب.</li>
+                    <li>يحسب النظام قيمة القسط الشهري تلقائياً.</li>
+                    <li>تُخصم الأقساط آلياً من الرواتب عند الصرف، ويتابع النظام المتبقي.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="sec-bonuses" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">11</span>
+                <h2>المكافآت والحوافز</h2>
+            </div>
+            <div class="card-body">
+                <ol class="guide-list">
+                    <li>من <b>المكافآت والحوافز</b> اضغط <b>مكافأة جديدة</b>.</li>
+                    <li>اختر الموظف ونوع المكافأة (أداء، عمولة، علاوة...) والمبلغ والسبب.</li>
+                    <li>تُضاف المكافآت تلقائياً ضمن بنود الراتب في الفترة التالية.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="sec-reports" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">12</span>
+                <h2>التقارير والتصدير (Excel / PDF)</h2>
+            </div>
+            <div class="card-body">
+                <p>صفحة <b>التقارير</b> تعرض: توزيع الموظفين على الأقسام، ملخص الرواتب، ملخص السلف، واستهلاك الإجازات، إضافة إلى روابط مباشرة لتصدير كل التقارير.</p>
+                <h4>تصدير Excel منسق (xlsx)</h4>
+                <p>يدعم النظام تصدير تقارير باحترافية كاملة التنسيق (ألوان، حدود، صفوف مظللة، مجاميع) وتشمل تذييل التوقيعات:</p>
+                <ul class="guide-list">
+                    <li><b>تقرير الموظفين الشامل</b> — كل بيانات الموظفين وبدلاتهم.</li>
+                    <li><b>تقرير الحضور الشهري</b> — أيام الحضور والتأخير والغياب والساعات الإضافية.</li>
+                    <li><b>كشف رواتب الفترة</b> — بنود الرواتب والخصومات والصافي.</li>
+                    <li><b>تقرير إجازات الموظفين</b> — الأرصدة والاستهلاك.</li>
+                    <li><b>تقرير السلف والقروض</b> — المتبقي والأقساط.</li>
+                </ul>
+                <h4>تصدير PDF احترافي</h4>
+                <p>يدعم النظام توليد ملفات <b>PDF عربية</b> جاهزة للطباعة والتوزيع وتشمل الترويسة والتوقيعات:</p>
+                <ul class="guide-list">
+                    <li><b>كشف الراتب الفردي</b> — من صفحة كشف الراتب (زر تحميل PDF).</li>
+                    <li><b>كشف رواتب الفترة</b> — من صفحة تفاصيل الرواتب.</li>
+                    <li><b>تقرير الحضور الشهري</b> — من صفحة الحضور أو التقارير.</li>
+                    <li><b>الشهادات الرسمية</b> — شهادة إجازة وشهادة خبرة (قسم منفصل بالدليل).</li>
+                </ul>
+                <p class="guide-note"><i class="fas fa-lightbulb"></i> جميع التقارير تُرفق تلقائياً بتوقيع المختص — الاسم والصّفة قابلان للتعديل من <b>الإعدادات ← التوقيعات والأسماء</b>، ويمكن أيضاً طباعة أي صفحة من النظام عبر زر الطباعة.</p>
+            </div>
+        </section>
+
+        <section id="sec-certificates" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">13</span>
+                <h2>الشهادات الرسمية</h2>
+            </div>
+            <div class="card-body">
+                <ul class="guide-list">
+                    <li><b>شهادة إجازة:</b> من صفحة <b>الإجازات</b> اضغط أيقونة السجل <i class="fas fa-scroll"></i> أمام الطلب <b>الموافَق عليه</b>، فتظهر الشهادة الرسمية بهوية الشركة.</li>
+                    <li><b>شهادة خبرة:</b> من ملف الموظف اضغط زر <b>شهادة خبرة</b>.</li>
+                    <li>من صفحة الشهادة يمكن: <b>الطباعة</b> مباشرة، أو <b>حفظ PDF</b>، مع خيار نسخة <b>بلا توقيع</b> لطباعتها وتوقيعها يدوياً.</li>
+                    <li>تذييل الشهادة يحمل توقيع <b>المدير المالي / محاسب / أحمد عبدالله</b> وحقوق الملكية.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-insurance" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">14</span>
+                <h2>التأمينات والضرائب</h2>
+            </div>
+            <div class="card-body">
+                <p>من القائمة الجانبية <b>التأمينات والضرائب</b> تظهر كشوف استقطاعات أي فترة رواتب محسوبة:</p>
+                <ul class="guide-list">
+                    <li><b>المرتب التأميني</b> = الأساسي + بدلات السكن والانتقال والوجبات.</li>
+                    <li><b>استقطاع التأمينات</b> بنسبة التأمينات المحددة في الإعدادات.</li>
+                    <li><b>ضريبة كسب العمل</b> المحتسبة في احتساب الرواتب.</li>
+                    <li>زر <b>Excel</b> يصدّر الكشف منسقاً مع توقيع المحاسب، وزر <b>PDF</b> يولّد نسخة ورقية تُرفق بالإقرارات.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-settings" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">15</span>
+                <h2>الإعدادات العامة</h2>
+            </div>
+            <div class="card-body">
+                <ul class="guide-list">
+                    <li><b>بيانات الشركة:</b> الاسم، العنوان، الهاتف، الرقم الضريبي، العملة.</li>
+                    <li><b>مواعيد العمل:</b> بداية ونهاية الدوام، وعتبة التأخر المسموحة بالدقائق.</li>
+                    <li><b>الإجازات:</b> مدد الإجازة السنوية والمرضية.</li>
+                    <li><b>المالية:</b> نسبة التأمينات الاجتماعية ومعامل الساعات الإضافية.</li>
+                    <li><b>الأمان:</b> مفتاح API الخاص بأجهزة البصمة + إعدادات النسخ الاحتياطي التلقائي.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-users" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">16</span>
+                <h2>مستخدمو النظام</h2>
+            </div>
+            <div class="card-body">
+                <ul class="guide-list">
+                    <li>اضغط على اسم المستخدم أعلى الشاشة لتغيير كلمة المرور (الملف الشخصي).</li>
+                    <li>من <b>مستخدمو النظام</b> يمكن إنشاء مستخدمين وتعطيلهم بحسب الأدوار (مدير نظام / HR).</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-api" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">17</span>
+                <h2>ربط جهاز البصمة عبر API الآمن</h2>
+            </div>
+            <div class="card-body">
+                <p>يمكن لأي جهاز أو برنامج متوسط إرسال النقرة مباشرة عبر عنوان الويب التالي، بشرط إرفاق <b>مفتاح API</b> الكائن في صفحة الإعدادات (قسم الأمان):</p>
+                <div class="guide-code">
+                    <code>POST http://SERVER:8080/api/fingerprint/punch</code><br>
+                    <code>Content-Type: application/json</code><br>
+                    <code>X-API-Key: HR-XXXX...</code><br><br>
+                    {<br>
+                    &nbsp;&nbsp;"fingerprint_id": "1001",<br>
+                    &nbsp;&nbsp;"timestamp": "2024-01-15 18:30:00"<br>
+                    }
+                </div>
+                <p class="guide-note"><i class="fas fa-lightbulb"></i> يستقبل النظام النقرة، يتحقق من المفتاح أولاً (يرفض الطلب <b>401</b> بدون مفتاح صحيح)، يحدد نوع النقرة (حضور/انصراف) حسب وقت العمل، ويسجلها فوراً في سجل الحضور. جرّب المحاكاة من صفحة أجهزة البصمة قبل الربط الفعلي.</p>
+            </div>
+        </section>
+
+        <section id="sec-backup" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">18</span>
+                <h2>النسخ الاحتياطي والاستعادة</h2>
+            </div>
+            <div class="card-body">
+                <ul class="guide-list">
+                    <li>افتح <b>النسخ الاحتياطي</b> من القائمة الجانبية، واضغط <b>"نسخ احتياطي الآن"</b> مع ملاحظة اختيارية.</li>
+                    <li>النظام ينشئ <b>نسخة تلقائية يومياً</b> الساعة 2:00 صباحاً، ويحتفظ بآخر 30 نسخة.</li>
+                    <li>من الجدول يمكن <b>تحميل</b> أي نسخة إلى فلاشة أو قرص خارجي، أو <b>استعادة</b> قاعدة البيانات من نسخة سابقة، أو <b>حذف</b> نسخة قديمة.</li>
+                    <li>تُحفظ النسخ داخل مجلد <code>backups</code> بجوار ملف النظام.</li>
+                </ul>
+                <div class="guide-callout">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>النسخ الاحتياطي مهم جداً لأن قاعدة البيانات <code>hr_system.db</code> تحتوي <b>كل</b> بياناتك (الموظفون، الرواتب، الحضور). احرص على أخذ نسخة قبل أي تحديث أو تنظيف.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-smart" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">19</span>
+                <h2>التنبيهات الذكية والغياب التلقائي</h2>
+            </div>
+            <div class="card-body">
+                <p><b>التنبيهات الذكية</b> تظهر في لوحة التحكم تلقائياً وتنبّهك إلى:</p>
+                <ul class="guide-list">
+                    <li>قرب نفاد رصيد إجازة موظف (باقي 3 أيام أو أقل).</li>
+                    <li>الغياب المتكرر لأكثر من 3 أيام لنفس الموظف في الشهر.</li>
+                    <li>موظفون نشطون غير مسجلين على أجهزة البصمة.</li>
+                    <li>طلبات إجازة معلقة تنتظر الموافقة.</li>
+                    <li>سلف متأخرة (نشطة لأكثر من 3 أشهر).</li>
+                    <li>فترة رواتب حالية لم تُحتسب بعد.</li>
+                </ul>
+                <p><b>حساب الغياب التلقائي:</b> كل يوم الساعة 11:30 مساءً يسجل النظام غياب كل موظف لم يسجل حضوراً ولم يكن في إجازة موافَق عليها، ويمكنك تنفيذه يدوياً في أي وقت من زر <b>"حساب الغياب"</b> في صفحة الحضور.</p>
+            </div>
+        </section>
+
+        <section id="sec-security" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">20</span>
+                <h2>الأمان والحماية</h2>
+            </div>
+            <div class="card-body">
+                <p>النظام مبني على أعلى معايير الحماية رغم أنه نظام محلي:</p>
+                <ul class="guide-list">
+                    <li><b>حماية CSRF:</b> كل نموذج في النظام يحمل رمز حماية سرياً يمنع هجمات تزوير الطلبات من المواقع الخبيثة.</li>
+                    <li><b>مفتاح API:</b> أجهزة البصمة لا تستطيع التسجيل إلا بمفتاح سري خاص، ويُرفض أي طلب بدون مفتاح صحيح (401).</li>
+                    <li><b>كوكيز آمنة:</b> الجلسات محمية بعدم القراءة بالجافاسكريبت وبضبط SameSite لمنع التزوير.</li>
+                    <li><b>مفتاح العبث:</b> رمز توقيع الجلسات مخزّن في ملف <code>secret.key</code> ولا يمكن تخمينه.</li>
+                    <li><b>حد حجم الملفات:</b> يمنع رفع ملفات ضخمة من استنزاف الجهاز.</li>
+                    <li>جرّب تجديد مفتاح API من الإعدادات إذا ظننت أنه تسرب.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sec-faq" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">21</span>
+                <h2>استكشاف الأخطاء وحلولها</h2>
+            </div>
+            <div class="card-body">
+                <div class="faq-item">
+                    <h4><b>س: المتصفح لا يفتح عند التشغيل؟</b></h4>
+                    <p>افتح المتصفح يدوياً واكتب: <code>http://127.0.0.1:8080</code>. إذا لم يعمل فتأكد أن <code>pythonw.exe</code> لم يتم حظره، وراجع السجل في الملف <code>logs\server.log</code>.</p>
+                </div>
+                <div class="faq-item">
+                    <h4><b>س: المنفذ 8080 مشغول؟</b></h4>
+                    <p>أغلق أي برنامج يستخدم المنفذ ثم أعد التشغيل، أو إن استمر لا يمكن تغيير المنفذ إلا بتعديل <code>run_server.py</code> و<code>app.py</code> معاً.</p>
+                </div>
+                <div class="faq-item">
+                    <h4><b>س: الجهاز لا يزامن الحضور؟</b></h4>
+                    <p>تأكد أن الجهاز على نفس الشبكة، وأن النوع ZK-Teco والـ IP صحيح، وأن رقم البصمة في النظام مطابق لرقم الموظف على الجهاز.</p>
+                </div>
+                <div class="faq-item">
+                    <h4><b>س: أريد إعادة تعيين كل شيء؟</b></h4>
+                    <p>أوقف النظام واحذف الملف <code>hr_system.db</code> ثم اشغله من جديد فيُعاد إنشاء قاعدة البيانات بأصناف افتراضية نظيفة.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-copyright" class="card guide-section">
+            <div class="guide-head">
+                <span class="guide-num">22</span>
+                <h2>حقوق الملكية</h2>
+            </div>
+            <div class="card-body guide-copyright">
+                <i class="fas fa-gem" style="font-size:40px; color:var(--primary);"></i>
+                <h3>نظام الموارد البشرية المتكامل</h3>
+                <p>جميع الحقوق محفوظة — تم تطوير هذا النظام وإعداده بواسطة</p>
+                <h2 style="color:var(--primary);">{% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}</h2>
+                <p class="muted">حقوق الملكية محفوظة © {{ today.year }}. لا يجوز إعادة توزيع البرنامج أو نسخه دون إذن كتابي من المالك.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

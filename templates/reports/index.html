@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block title %}التقارير{% endblock %}
+{% block page_title %}التقارير والإحصائيات{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-sitemap" style="color:var(--primary); margin-left:8px;"></i>عدد الموظفين حسب الأقسام</h3>
+            <button class="btn btn-sm btn-outline" onclick="printPage()"><i class="fas fa-print"></i> طباعة</button>
+        </div>
+        <div class="card-body">
+            {% if dept_report %}
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                {% for item in dept_report %}
+                <div>
+                    <div class="flex-between mb-8">
+                        <span class="bold" style="font-size:13px;">{{ item.department.name }}</span>
+                        <span style="font-size:12px;">
+                            <span class="badge badge-primary">{{ item.count }} موظف</span>
+                            <span class="muted">إجمالي {{ fmt_money(item.salary_total) }}</span>
+                        </span>
+                    </div>
+                    <div class="progress">
+                        {% set total_all = dept_report|sum(attribute='count') %}
+                        {% set pct = (item.count / total_all * 100)|round(1) if total_all else 0 %}
+                        <div class="progress-bar {% if pct > 50 %}success{% endif %}" style="width: {{ pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-building"></i><h4>لا توجد بيانات</h4></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave" style="color:var(--success); margin-left:8px;"></i>ملخص الرواتب</h3>
+            <a href="{{ url_for('payroll_index') }}" class="btn btn-sm btn-outline">تفاصيل</a>
+        </div>
+        <div class="card-body">
+            {% if payroll_report and latest_period %}
+            <div class="salary-breakdown">
+                <div class="salary-row"><span>الفترة</span><span class="bold">{{ latest_period.name }}</span></div>
+                <div class="salary-row"><span>عدد الموظفين</span><span class="bold">{{ payroll_report.employee_count }}</span></div>
+                <div class="salary-row"><span>إجمالي الرواتب الإجمالية</span><span class="bold">{{ fmt_money(payroll_report.total_gross) }}</span></div>
+                <div class="salary-row"><span>إجمالي الخصومات</span><span class="bold text-danger">{{ fmt_money(payroll_report.total_deductions) }}</span></div>
+                <div class="salary-row total"><span>صافي المستحق</span><span class="text-success">{{ fmt_money(payroll_report.total_net) }}</span></div>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-calculator"></i><h4>لا توجد فترات رواتب محسوبة</h4><p>احتسب الرواتب أولاً من صفحة الرواتب</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2 mt-24">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-hand-holding-usd" style="color:var(--warning); margin-left:8px;"></i>ملخص السلف والقروض</h3>
+            <a href="{{ url_for('loans_list') }}" class="btn btn-sm btn-outline">السلف</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if loans.loans %}
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>الموظف</th><th>النوع</th><th>المتبقي</th></tr></thead>
+                    <tbody>
+                        {% for loan in loans.loans %}
+                        {% if loan.status == 'active' %}
+                        <tr>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="emp-avatar" style="width:30px; height:30px; font-size:11px;">{{ loan.employee.first_name[0] }}{{ loan.employee.last_name[0] if loan.employee.last_name else '' }}</div>
+                                    <div>
+                                        <div class="emp-name" style="font-size:13px;">{{ loan.employee.full_name }}</div>
+                                        <div class="emp-id">{{ loan.employee.emp_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{% if loan.loan_type == 'savings' %}سلفة{% else %}قرض{% endif %}</td>
+                            <td class="bold text-danger">{{ fmt_money(loan.remaining_amount) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state"><i class="fas fa-coins"></i><h4>لا توجد سلف نشطة</h4></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-plane-departure" style="color:var(--purple); margin-left:8px;"></i>استهلاك الإجازات ({{ today.year }})</h3>
+            <a href="{{ url_for('leaves_balances') }}" class="btn btn-sm btn-outline">الأرصدة</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>الموظف</th><th>مستحق</th><th>مستخدم</th><th>متبقي</th></tr></thead>
+                    <tbody>
+                        {% for item in leave_report[:10] %}
+                        <tr>
+                            <td>
+                                <div class="emp-cell">
+                                    <div class="emp-avatar" style="width:30px; height:30px; font-size:11px;">{{ item.employee.first_name[0] }}{{ item.employee.last_name[0] if item.employee.last_name else '' }}</div>
+                                    <div>
+                                        <div class="emp-name" style="font-size:13px;">{{ item.employee.full_name }}</div>
+                                        <div class="emp-id">{{ item.employee.emp_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="bold">{{ item.total_entitled }}</td>
+                            <td class="text-warning bold">{{ item.total_used }}</td>
+                            <td>
+                                <span class="badge {{ 'badge-danger' if item.total_remaining == 0 else 'badge-success' }}">{{ item.total_remaining }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-24">
+    <div class="card-header">
+        <h3><i class="fas fa-file-excel" style="color:var(--success); margin-left:8px;"></i>التقارير القابلة للتصدير (Excel منسق)</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid grid-3">
+            <a href="{{ url_for('export_employees_xlsx') }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-excel" style="font-size:24px; color:var(--success);"></i>
+                    <span>تقرير الموظفين الشامل (Excel)</span>
+                    <small class="muted">البيانات + البدلات + الإجماليات</small>
+                </div>
+            </a>
+            <a href="{{ url_for('export_attendance_xlsx', month=today.month, year=today.year) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-excel" style="font-size:24px; color:var(--info);"></i>
+                    <span>تقرير الحضور الشهري (Excel)</span>
+                    <small class="muted">حضور / تأخير / غياب / ساعات إضافية</small>
+                </div>
+            </a>
+            {% if latest_period %}
+            <a href="{{ url_for('export_payroll_xlsx', period_id=latest_period.id) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-excel" style="font-size:24px; color:var(--warning);"></i>
+                    <span>كشف رواتب {{ latest_period.name }} (Excel)</span>
+                    <small class="muted">بنود الرواتب والخصومات والصافي</small>
+                </div>
+            </a>
+            {% else %}
+            <a href="{{ url_for('payroll_index') }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-calculator" style="font-size:24px; color:var(--text-3);"></i>
+                    <span>كشف رواتب (Excel)</span>
+                    <small class="muted">احسب الفترة أولاً من صفحة الرواتب</small>
+                </div>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('export_leaves_xlsx', year=today.year) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-excel" style="font-size:24px; color:var(--purple);"></i>
+                    <span>أرصدة الإجازات {{ today.year }} (Excel)</span>
+                    <small class="muted">المستحق / المسحوب / المتبقي</small>
+                </div>
+            </a>
+            <a href="{{ url_for('export_loans_xlsx') }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-excel" style="font-size:24px; color:var(--danger);"></i>
+                    <span>السلف والقروض (Excel)</span>
+                    <small class="muted">المبالغ والأقساط والمتبقي</small>
+                </div>
+            </a>
+            <a href="{{ url_for('attendance_report') }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-chart-pie" style="font-size:24px; color:var(--primary);"></i>
+                    <span>تقرير الحضور التفصيلي</span>
+                    <small class="muted">عرض داخل النظام</small>
+                </div>
+            </a>
+        </div>
+        <p class="form-help mt-16">
+            <i class="fas fa-shield-halved"></i> جميع ملفات Excel تُرفق بتوقيع المحاسب وحقوق الملكية:
+            <b>{% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}</b>
+        </p>
+    </div>
+</div>
+
+<div class="card mt-24">
+    <div class="card-header">
+        <h3><i class="fas fa-file-pdf" style="color:var(--danger); margin-left:8px;"></i>PDF وشهادات رسمية</h3>
+    </div>
+    <div class="card-body">
+        <div class="grid grid-3">
+            <a href="{{ url_for('export_attendance_pdf', month=today.month, year=today.year) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-pdf" style="font-size:24px; color:var(--danger);"></i>
+                    <span>تقرير الحضور الشهري (PDF)</span>
+                    <small class="muted">قابل للطباعة من أي مكان</small>
+                </div>
+            </a>
+            <a href="{{ url_for('insurance_report') }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-invoice-dollar" style="font-size:24px; color:var(--primary);"></i>
+                    <span>التأمينات والضرائب</span>
+                    <small class="muted">كشف استقطاعات التأمينات وضريبة كسب العمل</small>
+                </div>
+            </a>
+            {% if latest_period %}
+            <a href="{{ url_for('export_payroll_pdf', period_id=latest_period.id) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-pdf" style="font-size:24px; color:var(--danger);"></i>
+                    <span>كشف رواتب {{ latest_period.name }} (PDF)</span>
+                    <small class="muted">كشف الفترة كاملاً بالتوقيعات</small>
+                </div>
+            </a>
+            {% endif %}
+        </div>
+        <p class="form-help mt-16">
+            <i class="fas fa-shield-halved"></i> الشهادات الرسمية (إجازة / خبرة) تصدر من صفحة الموظف وطلبات الإجازات، وتُطبَع أو تُحفظ
+            <b>PDF</b> بهوية الشركة وتوقيع <b>{% if setting('sign_fin_name') %}{{ setting('sign_fin_role') or 'محاسب' }} / {{ setting('sign_fin_name') }}{% else %}{{ setting('sign_fin_role') or 'محاسب' }}{% endif %}</b>.
+        </p>
+    </div>
+</div>
+{% endblock %}

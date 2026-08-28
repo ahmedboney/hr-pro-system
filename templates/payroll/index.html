@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}الرواتب والأجور{% endblock %}
+{% block page_title %}الرواتب والأجور{% endblock %}
+
+{% block content %}
+<div class="grid grid-2 mb-24">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-calendar-alt" style="color:var(--primary); margin-left:8px;"></i>الفترة الحالية: {{ current_period.name }}</h3>
+            <span class="badge badge-success">نشطة</span>
+        </div>
+        <div class="card-body">
+            <div class="salary-breakdown">
+                <div class="salary-row">
+                    <span>بداية الفترة</span>
+                    <span class="bold">{{ fmt_date(current_period.start_date) }}</span>
+                </div>
+                <div class="salary-row">
+                    <span>نهاية الفترة</span>
+                    <span class="bold">{{ fmt_date(current_period.end_date) }}</span>
+                </div>
+                <div class="salary-row">
+                    <span>حالة الفترة</span>
+                    <span class="bold">{{ {'active':'نشطة','processed':'تم الاحتساب','closed':'مغلقة'}[current_period.status] }}</span>
+                </div>
+            </div>
+            <div class="mt-16">
+                <a href="{{ url_for('payroll_details', period_id=current_period.id) }}" class="btn btn-primary">
+                    <i class="fas fa-calculator"></i> احتساب رواتب {{ current_period.name }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle" style="color:var(--info); margin-left:8px;"></i>كيفية احتساب الراتب</h3>
+        </div>
+        <div class="card-body">
+            <ul style="list-style: none; font-size: 13px; line-height: 2;">
+                <li><i class="fas fa-check-circle text-success"></i> الراتب الإجمالي = الأساسي + جميع البدلات + المكافآت + العمل الإضافي</li>
+                <li><i class="fas fa-check-circle text-success"></i> خصم الغياب = عدد أيام الغياب × قيمة اليوم</li>
+                <li><i class="fas fa-check-circle text-success"></i> خصم التأخير = دقائق التأخير المتراكمة × قيمة الساعة</li>
+                <li><i class="fas fa-check-circle text-success"></i> خصم الإجازة بدون أجر = أيامها × قيمة اليوم</li>
+                <li><i class="fas fa-check-circle text-success"></i> خصم التأمينات الاجتماعية = 11% من إجمالي الراتب</li>
+                <li><i class="fas fa-check-circle text-success"></i> خصم أقساط السلف والقروض النشطة</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-history" style="color:var(--success); margin-left:8px;"></i>فترات الرواتب السابقة</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>الفترة</th><th>الشهر/السنة</th><th>البداية</th><th>النهاية</th><th>الحالة</th><th>إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in periods %}
+                    <tr>
+                        <td class="bold">{{ p.name }}</td>
+                        <td>{{ p.period_month }}/{{ p.period_year }}</td>
+                        <td>{{ fmt_date(p.start_date) }}</td>
+                        <td>{{ fmt_date(p.end_date) }}</td>
+                        <td>
+                            {% if p.status == 'active' %}<span class="badge badge-primary">نشطة</span>
+                            {% elif p.status == 'processed' %}<span class="badge badge-warning">تم الاحتساب</span>
+                            {% else %}<span class="badge badge-success">مغلقة</span>{% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('payroll_details', period_id=p.id) }}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i> {{ 'عرض وحديث' if p.status == 'processed' else 'احتساب' }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

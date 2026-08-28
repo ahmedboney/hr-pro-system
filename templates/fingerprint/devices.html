@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}أجهزة البصمة{% endblock %}
+{% block page_title %}أجهزة البصمة{% endblock %}
+
+{% block content %}
+<div class="grid grid-3 mb-24">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-primary"><i class="fas fa-fingerprint"></i></div>
+        <div class="stat-value">{{ enrolled_count }}</div>
+        <div class="stat-label">موظف مسجل بالبصمة</div>
+        <div class="stat-trend">من إجمالي {{ total_employees }} موظف</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-success"><i class="fas fa-server"></i></div>
+        <div class="stat-value">{{ devices|length }}</div>
+        <div class="stat-label">الأجهزة المضافة</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-user-slash"></i></div>
+        <div class="stat-value">{{ employees_without_fp }}</div>
+        <div class="stat-label">موظف بدون بصمة</div>
+        <div class="stat-trend">يحتاجون ربط برقم بصمة</div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <span class="bold"><i class="fas fa-info-circle" style="color:var(--info);"></i> اختر نوع الجهاز:</span>
+    <div class="flex gap-8" style="flex-wrap:wrap;">
+        <span class="badge badge-primary">ZK-Teco (منفذ 4370)</span>
+        <span class="badge badge-info">HTTP API устройства</span>
+        <span class="badge badge-success">محاكي للتجربة</span>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('device-modal')" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> إضافة جهاز
+    </button>
+</div>
+
+{% if devices %}
+<div class="grid grid-2">
+    {% for device in devices %}
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fas fa-server" style="color:var(--primary); margin-left:8px;"></i>
+                {{ device.name }}
+                {% if device.device_type == 'simulator' %}<span class="badge badge-success">محاكي</span>
+                {% elif device.device_type == 'zkteco' %}<span class="badge badge-primary">ZK-Teco</span>
+                {% elif device.device_type == 'http' %}<span class="badge badge-info">HTTP</span>
+                {% else %}<span class="badge badge-gray">{{ device.device_type }}</span>{% endif %}
+            </h3>
+            <div class="flex gap-8">
+                <a href="{{ url_for('fingerprint_sync', device_id=device.id) }}" class="btn btn-sm btn-primary" title="مزامنة البيانات"><i class="fas fa-sync-alt"></i> مزامنة</a>
+                <button class="btn btn-sm btn-outline" onclick="openModal('edit-device-{{ device.id }}')" title="تعديل"><i class="fas fa-edit"></i></button>
+                <form method="POST" action="{{ url_for('fingerprint_delete', device_id=device.id) }}" onsubmit="return confirm('حذف الجهاز {{ device.name }}؟')">
+                    <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="salary-breakdown">
+                <div class="salary-row">
+                    <span><i class="fas fa-network-wired" style="color:var(--text-3); margin-left:6px;"></i>عنوان IP</span>
+                    <span class="bold" dir="ltr">{{ device.device_ip or '—' }}</span>
+                </div>
+                <div class="salary-row">
+                    <span><i class="fas fa-industry" style="color:var(--text-3); margin-left:6px;"></i>الطراز</span>
+                    <span class="bold">{{ device.model or '—' }}</span>
+                </div>
+                <div class="salary-row">
+                    <span><i class="fas fa-map-marker-alt" style="color:var(--text-3); margin-left:6px;"></i>الموقع</span>
+                    <span class="bold">{{ device.location or '—' }}</span>
+                </div>
+                <div class="salary-row">
+                    <span>حالة الجهاز</span>
+                    <span class="status-dot {{ 'active' if device.status == 'active' else 'inactive' }}">{{ 'نشط' if device.status == 'active' else 'متوقف' }}</span>
+                </div>
+            </div>
+
+            {% if device.device_type == 'simulator' %}
+            <div class="bg-light" style="margin-top:14px; padding:12px; border-radius:8px; border-right:3px solid var(--success); font-size:12px;">
+                <i class="fas fa-flask" style="color:var(--success);"></i>
+                يستخدم هذا الجهاز للتجربة بدون جهاز حقيقي. استخدم صفحة <a href="{{ url_for('fingerprint_simulate') }}"><b>محاكاة البصمة</b></a> لتسجيل بصمات تجريبية.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Edit device modal -->
+    <div class="modal-overlay" id="edit-device-{{ device.id }}">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>تعديل جهاز: {{ device.name }}</h3>
+                <button class="modal-close" onclick="closeModal('edit-device-{{ device.id }}')">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('fingerprint_edit', device_id=device.id) }}">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>اسم الجهاز</label>
+                        <input type="text" name="name" class="form-control" value="{{ device.name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>عنوان IP</label>
+                        <input type="text" name="device_ip" class="form-control" value="{{ device.device_ip or '' }}" dir="ltr">
+                    </div>
+                    <div class="form-group">
+                        <label>الطراز</label>
+                        <input type="text" name="model" class="form-control" value="{{ device.model or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>الموقع</label>
+                        <input type="text" name="location" class="form-control" value="{{ device.location or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>النوع</label>
+                        <select name="device_type" class="form-control">
+                            <option value="zkteco" {% if device.device_type == 'zkteco' %}selected{% endif %}>ZK-Teco</option>
+                            <option value="http" {% if device.device_type == 'http' %}selected{% endif %}>HTTP</option>
+                            <option value="tcp" {% if device.device_type == 'tcp' %}selected{% endif %}>TCP</option>
+                            <option value="simulator" {% if device.device_type == 'simulator' %}selected{% endif %}>محاكي</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>الحالة</label>
+                        <select name="status" class="form-control">
+                            <option value="active" {% if device.status == 'active' %}selected{% endif %}>نشط</option>
+                            <option value="inactive" {% if device.status == 'inactive' %}selected{% endif %}>متوقف</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-8 mt-16">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('edit-device-{{ device.id }}')">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="fas fa-fingerprint"></i>
+            <h4>لا توجد أجهزة بصمة</h4>
+            <p>أضف جهاز بصمة حقيقي أو استخدم المحاكي للتجربة</p>
+            <button class="btn btn-primary mt-16" onclick="openModal('device-modal')"><i class="fas fa-plus"></i> إضافة جهاز</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add device modal -->
+<div class="modal-overlay" id="device-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>إضافة جهاز بصمة</h3>
+            <button class="modal-close" onclick="closeModal('device-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('fingerprint_add') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم الجهاز <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="مثال: جهاز المدخل الرئيسي" required>
+                </div>
+                <div class="form-group">
+                    <label>عنوان IP</label>
+                    <input type="text" name="device_ip" class="form-control" placeholder="192.168.1.200" dir="ltr">
+                </div>
+                <div class="form-group">
+                    <label>الطراز</label>
+                    <input type="text" name="model" class="form-control" placeholder="ZK-Teco uFace 800">
+                </div>
+                <div class="form-group">
+                    <label>الموقع</label>
+                    <input type="text" name="location" class="form-control" placeholder="المدخل الرئيسي">
+                </div>
+                <div class="form-group">
+                    <label>نوع الجهاز</label>
+                    <select name="device_type" class="form-control">
+                        <option value="simulator">محاكي (للتجربة بدون جهاز)</option>
+                        <option value="zkteco">ZK-Teco (SDK/منفذ 4370)</option>
+                        <option value="http">جهاز HTTP API</option>
+                        <option value="tcp">جهاز TCP</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الحالة</label>
+                    <select name="status" class="form-control">
+                        <option value="active">نشط</option>
+                        <option value="inactive">متوقف</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-help mt-8">
+                <i class="fas fa-lightbulb" style="color:var(--warning);"></i> نصيحة: لبدء سريع، أضف <b>جهاز محاكي</b> وجرب نظام البصمة بالكامل ثم اربط الجهاز الحقيقي لاحقاً.
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> إضافة</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('device-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

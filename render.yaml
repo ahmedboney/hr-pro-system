@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: hr-pro-system
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true

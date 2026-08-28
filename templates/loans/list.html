@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}السلف والقروض{% endblock %}
+{% block page_title %}السلف والقروض{% endblock %}
+
+{% block content %}
+<div class="grid grid-3 mb-24">
+    <div class="stat-card">
+        <div class="stat-icon s-bg-primary"><i class="fas fa-hand-holding-usd"></i></div>
+        <div class="stat-value">{{ loans|length }}</div>
+        <div class="stat-label">إجمالي السلف والقروض</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-warning"><i class="fas fa-spinner"></i></div>
+        <div class="stat-value">{{ loans|selectattr('status', 'equalto', 'active')|list|length }}</div>
+        <div class="stat-label">سلف نشطة</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon s-bg-danger"><i class="fas fa-coins"></i></div>
+        <div class="stat-value">{{ fmt_money(loans|selectattr('status', 'equalto', 'active')|list|sum(attribute='remaining_amount')) }}</div>
+        <div class="stat-label">إجمالي المتبقي للتحصيل</div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <button class="btn btn-primary" onclick="openModal('loan-modal')" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> تسجيل سلفة / قرض
+    </button>
+    <a href="{{ url_for('export_loans_xlsx') }}" class="btn btn-outline">
+        <i class="fas fa-file-excel" style="color:var(--success);"></i> تصدير Excel
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-coins" style="color:var(--warning); margin-left:8px;"></i> سجل السلف والقروض</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if loans %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الموظف</th>
+                        <th>النوع</th>
+                        <th>المبلغ الأصلي</th>
+                        <th>عدد الأقساط</th>
+                        <th>قيمة القسط</th>
+                        <th>المتبقي</th>
+                        <th>السبب</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar">{{ loan.employee.first_name[0] }}{{ loan.employee.last_name[0] if loan.employee.last_name else '' }}</div>
+                                <div>
+                                    <div class="emp-name">{{ loan.employee.full_name }}</div>
+                                    <div class="emp-id">{{ loan.employee.emp_id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{% if loan.loan_type == 'savings' %}<span class="badge badge-info"><i class="fas fa-piggy-bank"></i> سلفة</span>{% else %}<span class="badge badge-purple"><i class="fas fa-bank"></i> قرض</span>{% endif %}</td>
+                        <td class="bold">{{ fmt_money(loan.amount) }}</td>
+                        <td>{{ loan.installment_count }}</td>
+                        <td>{{ fmt_money(loan.installment_amount) }}</td>
+                        <td class="bold {% if loan.remaining_amount > 0 %}text-danger{% else %}text-success{% endif %}">{{ fmt_money(loan.remaining_amount) }}</td>
+                        <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ loan.reason or '—' }}</td>
+                        <td>
+                            {% if loan.status == 'active' %}<span class="badge badge-warning">نشط</span>
+                            {% elif loan.status == 'paid' %}<span class="badge badge-success">مسدد</span>
+                            {% else %}<span class="badge badge-gray">ملغي</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="flex gap-8">
+                                {% if loan.status == 'active' %}
+                                <button class="btn btn-sm btn-success" onclick="openModal('pay-{{ loan.id }}')" title="سداد دفعة"><i class="fas fa-hand-holding-dollar"></i></button>
+                                <form method="POST" action="{{ url_for('loan_action', loan_id=loan.id) }}" onsubmit="return confirm('إلغاء هذه السلفة؟')">
+                                    <input type="hidden" name="action" value="cancel">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="إلغاء"><i class="fas fa-ban"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+
+                            {% if loan.status == 'active' %}
+                            <div class="modal-overlay" id="pay-{{ loan.id }}">
+                                <div class="modal">
+                                    <div class="modal-header">
+                                        <h3>سداد دفعة — {{ loan.employee.full_name }}</h3>
+                                        <button class="modal-close" onclick="closeModal('pay-{{ loan.id }}')">&times;</button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('loan_action', loan_id=loan.id) }}">
+                                        <input type="hidden" name="action" value="pay">
+                                        <div class="salary-breakdown mb-16">
+                                            <div class="salary-row"><span>المبلغ المتبقي</span><span class="bold text-danger">{{ fmt_money(loan.remaining_amount) }}</span></div>
+                                            <div class="salary-row"><span>القسط المستحق</span><span class="bold">{{ fmt_money(loan.installment_amount) }}</span></div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>المبلغ المدفوع</label>
+                                            <div class="input-group">
+                                                <input type="number" name="amount" step="0.01" class="form-control" value="{{ loan.installment_amount }}">
+                                                <span class="muted small">ج.م</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-8 mt-16">
+                                            <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> تسجيل السداد</button>
+                                            <button type="button" class="btn btn-outline" onclick="closeModal('pay-{{ loan.id }}')">إلغاء</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-coins"></i><h4>لا توجد سلف أو قروض</h4><p>سجّل سلفة أو قرض لأحد الموظفين</p></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- New loan modal -->
+<div class="modal-overlay" id="loan-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>تسجيل سلفة / قرض جديد</h3>
+            <button class="modal-close" onclick="closeModal('loan-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('loan_new') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>الموظف <span class="required">*</span></label>
+                    <select name="employee_id" class="form-control" required>
+                        <option value="">— اختر الموظف —</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.emp_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المبلغ <span class="required">*</span></label>
+                    <input type="number" name="amount" step="0.01" class="form-control" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>عدد الأقساط</label>
+                    <input type="number" name="installment_count" min="1" value="1" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>السبب</label>
+                    <input type="text" name="reason" class="form-control" placeholder="سبب السلفة">
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> تسجيل</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('loan-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

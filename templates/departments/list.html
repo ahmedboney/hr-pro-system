@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}الأقسام{% endblock %}
+{% block page_title %}إدارة الأقسام{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <button class="btn btn-primary" onclick="openModal('dept-modal')" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> قسم جديد
+    </button>
+</div>
+
+<div class="grid grid-2">
+    {% for dept in departments %}
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-building" style="color:var(--primary); margin-left:8px;"></i> {{ dept.name }}</h3>
+            <div class="flex gap-8">
+                <span class="badge badge-primary">{{ dept.employees.filter_by(status='active').count() }} موظف</span>
+                <button class="btn btn-sm btn-outline" onclick="openModal('edit-dept-{{ dept.id }}')"><i class="fas fa-edit"></i></button>
+                <form method="POST" action="{{ url_for('department_delete', dept_id=dept.id) }}" onsubmit="return confirm('حذف قسم {{ dept.name }}؟')">
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="muted small" style="min-height: 40px;">{{ dept.description or 'لا يوجد وصف' }}</p>
+            <div style="border-top:1px solid var(--light-2); padding-top: 12px;" class="small">
+                <span class="muted">مدير القسم:</span>
+                <span class="bold">{{ dept.manager.full_name if dept.manager else '—' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="edit-dept-{{ dept.id }}">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>تعديل قسم {{ dept.name }}</h3>
+                <button class="modal-close" onclick="closeModal('edit-dept-{{ dept.id }}')">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('department_edit', dept_id=dept.id) }}">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>اسم القسم</label>
+                        <input type="text" name="name" class="form-control" value="{{ dept.name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>مدير القسم</label>
+                        <select name="manager_id" class="form-control">
+                            <option value="">— بدون مدير —</option>
+                            {% for emp in dept.employees.all() %}
+                            <option value="{{ emp.id }}" {% if dept.manager_id == emp.id %}selected{% endif %}>{{ emp.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>الوصف</label>
+                        <textarea name="description" class="form-control">{{ dept.description or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="flex gap-8 mt-16">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('edit-dept-{{ dept.id }}')">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal-overlay" id="dept-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>قسم جديد</h3>
+            <button class="modal-close" onclick="closeModal('dept-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('department_new') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم القسم <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="مثال: الموارد البشرية" required>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>الوصف</label>
+                    <textarea name="description" class="form-control" placeholder="وصف مختصر للقسم"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> إضافة</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('dept-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}مستخدمو النظام{% endblock %}
+{% block page_title %}إدارة مستخدمي النظام{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <button class="btn btn-primary" onclick="openModal('user-modal')" style="margin-right:auto;">
+        <i class="fas fa-user-plus"></i> مستخدم جديد
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-user-shield" style="color:var(--purple); margin-left:8px;"></i> المستخدمون ({{ users|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>المستخدم</th>
+                        <th>الاسم الكامل</th>
+                        <th>الصلاحية</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="bold"><i class="fas fa-user" style="color:var(--primary); margin-left:8px;"></i> {{ u.username }}</td>
+                        <td>{{ u.full_name }}</td>
+                        <td>
+                            {% if u.role == 'admin' %}<span class="badge badge-danger"><i class="fas fa-crown"></i> مدير النظام</span>
+                            {% elif u.role == 'hr' %}<span class="badge badge-primary"><i class="fas fa-user-tie"></i> HR</span>
+                            {% else %}<span class="badge badge-gray">موظف</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}<span class="badge badge-success">نشط</span>
+                            {% else %}<span class="badge badge-danger">معطل</span>{% endif %}
+                        </td>
+                        <td class="muted">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="flex gap-8">
+                                {% if u.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('user_toggle', user_id=u.id) }}">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-outline' if u.is_active else 'btn-success' }}">
+                                        {{ 'تعطيل' if u.is_active else 'تفعيل' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('user_delete', user_id=u.id) }}" onsubmit="return confirm('حذف المستخدم {{ u.username }}؟')">
+                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                </form>
+                                {% else %}
+                                <span class="badge badge-info">أنت</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="user-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>مستخدم جديد</h3>
+            <button class="modal-close" onclick="closeModal('user-modal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('user_new') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم المستخدم <span class="required">*</span></label>
+                    <input type="text" name="username" class="form-control" placeholder="مثال: admin2" required>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور <span class="required">*</span></label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" name="full_name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>الصلاحية</label>
+                    <select name="role" class="form-control">
+                        <option value="hr">مدير الموارد البشرية</option>
+                        <option value="employee">موظف</option>
+                        <option value="admin">مدير النظام</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> إنشاء</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('user-modal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

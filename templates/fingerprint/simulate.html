@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}محاكاة البصمة{% endblock %}
+{% block page_title %}محاكاة تسجيل البصمة{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-fingerprint" style="color:var(--primary); margin-left:8px;"></i>محاكاة نقرة البصمة</h3>
+        </div>
+        <div class="card-body">
+            <div class="bg-light" style="padding: 14px; border-radius: 10px; margin-bottom: 18px; border-right: 4px solid var(--success);">
+                <i class="fas fa-flask" style="color:var(--success);"></i>
+                <span style="font-size: 13px;">اختر موظفاً وسجّل نقطة بصمة وكأنه لمس جهاز البصمة. مفيدة للتجربة والعرض قبل ربط جهاز حقيقي.</span>
+            </div>
+
+            <form method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>الموظف <span class="required">*</span></label>
+                        <select name="fingerprint_id" class="form-control" required>
+                            <option value="">— اختر الموظف —</option>
+                            {% for emp in employees %}
+                            <option value="{{ emp.fingerprint_id }}">{{ emp.full_name }} (بصمة: {{ emp.fingerprint_id }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if not employees %}
+                        <div class="form-help text-danger mt-8">لا يوجد موظف مسجل بالبصمة. أضف موظفاً برقم بصمة أولاً.</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label>نوع النقرة</label>
+                        <select name="mode" class="form-control">
+                            <option value="auto">تلقائي (صباح = حضور، مساء = انصراف)</option>
+                            <option value="check_in_only">حضور فقط</option>
+                            <option value="check_out_only">انصراف فقط</option>
+                            <option value="late">حضور متأخر</option>
+                            <option value="test_day">حضور يوم كامل (حتى الانصراف)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg mt-16" {% if not employees %}disabled{% endif %}>
+                    <i class="fas fa-fingerprint"></i> تسجيل البصمة
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-key" style="color:var(--purple); margin-left:8px;"></i>كيف تعمل المحاكاة</h3>
+        </div>
+        <div class="card-body">
+            <ul class="activity-list">
+                <li>
+                    <div class="activity-icon a-primary"><i class="fas fa-1"></i></div>
+                    <div class="activity-info">
+                        <div class="title">أدخل الموظف برقم بصمة</div>
+                        <div class="desc">من صفحة الموظفين — أضف موظفاً ورابط له رقم بصمة (مثال: 1001)</div>
+                    </div>
+                </li>
+                <li>
+                    <div class="activity-icon a-primary"><i class="fas fa-2"></i></div>
+                    <div class="activity-info">
+                        <div class="title">أضف جهاز محاكاة</div>
+                        <div class="desc">من صفحة أجهزة البصمة — أضف جهازاً نوع "محاكي"</div>
+                    </div>
+                </li>
+                <li>
+                    <div class="activity-icon a-primary"><i class="fas fa-3"></i></div>
+                    <div class="activity-info">
+                        <div class="title">سجّل نقرة هنا</div>
+                        <div class="desc">اختر الموظف واضغط "تسجيل البصمة" — سيظهر فوراً في سجل الحضور</div>
+                    </div>
+                </li>
+                <li>
+                    <div class="activity-icon a-success"><i class="fas fa-fingerprint"></i></div>
+                    <div class="activity-info">
+                        <div class="title">لجهاز حقيقي؟</div>
+                        <div class="desc">اربط جهاز ZK-Teco أو HTTP وستعمل نفس الآلية تلقائياً عند المزامنة</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
