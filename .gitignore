@@ -26,6 +26,9 @@ dist/
 *.spec
 releases/
 
+# Cloudflare tunnel binary (كبير الحجم - يُضمّن في حزم ZIP فقط)
+cloudflared.exe
+
 # Screenshots local (نُرفع صور PNG فقط إلى GitHub، تبقى PDF وDB خارجاً)
 screenshots/*
 !screenshots/*.png

@@ -110,32 +110,57 @@ def _signers():
 
 
 def _footer(canvas, doc, company="", by_line=None):
-    """ترويسة وتذييل كل صفحة"""
+    """ترويسة/تذييل + إطار فخم موحد (مطابق لتصميم الشهادات) لكل صفحات PDF"""
     if by_line is None:
         by_line = _signers()[0]
     canvas.saveState()
     w, h = A4
+    gold = colors.HexColor('#C9A227')
 
-    # ترويسة
-    canvas.setFont('ArBd', 8)
+    # علامة مائية (خلفية)
+    canvas.setFont('ArBd', 56)
+    canvas.setFillColor(colors.HexColor('#EFF2F9'))
+    canvas.saveState()
+    canvas.translate(w / 2, h / 2)
+    canvas.rotate(45)
+    canvas.drawCentredString(0, 0, ar("نظام الموارد البشرية المتكامل"))
+    canvas.restoreState()
+
+    # إطار خارجي كحلي سميك
+    canvas.setStrokeColor(COLOR_HEADER)
+    canvas.setLineWidth(2.0)
+    canvas.rect(9 * mm, 9 * mm, w - 18 * mm, h - 18 * mm)
+    # إطار داخلي ذهبي رفيع
+    canvas.setStrokeColor(gold)
+    canvas.setLineWidth(0.9)
+    canvas.rect(12 * mm, 12 * mm, w - 24 * mm, h - 24 * mm)
+    # زوايا ذهبية
+    canvas.setFillColor(gold)
+    d = 2.0 * mm
+    for cx, cy in ((12 * mm, 12 * mm), (w - 12 * mm, 12 * mm),
+                   (12 * mm, h - 12 * mm), (w - 12 * mm, h - 12 * mm)):
+        canvas.circle(cx, cy, d, stroke=0, fill=1)
+
+    # ترويسة علوية
+    canvas.setFont('ArBd', 12)
     canvas.setFillColor(COLOR_HEADER)
-    canvas.drawCentredString(w / 2, h - 12 * mm, ar(company or "نظام الموارد البشرية المتكامل"))
-
-    canvas.setStrokeColor(colors.HexColor('#CBD5E1'))
-    canvas.setLineWidth(0.6)
-    canvas.line(12 * mm, h - 14 * mm, w - 12 * mm, h - 14 * mm)
+    canvas.drawCentredString(w / 2, h - 15 * mm, ar(company or "نظام الموارد البشرية المتكامل"))
+    canvas.setStrokeColor(gold)
+    canvas.setLineWidth(0.7)
+    canvas.line(12 * mm, h - 17.5 * mm, w - 12 * mm, h - 17.5 * mm)
 
     # تذييل
+    canvas.setStrokeColor(colors.HexColor('#CBD5E1'))
     canvas.setLineWidth(0.6)
-    canvas.line(12 * mm, 13 * mm, w - 12 * mm, 13 * mm)
+    canvas.line(12 * mm, 17 * mm, w - 12 * mm, 17 * mm)
     canvas.setFont('Ar', 8)
-    canvas.setFillColor(colors.HexColor('#64748B'))
+    canvas.setFillColor(colors.HexColor('#475569'))
     canvas.drawCentredString(
-        w / 2, 9 * mm,
+        w / 2, 13.5 * mm,
         ar(f"إعداد البرنامج: نظام الموارد البشرية المتكامل - حقوق الملكية محفوظة © {date.today().year} - {by_line}")
     )
     canvas.setFont('Ar', 7)
-    canvas.drawCentredString(w / 2, 6 * mm, ar("مستند آلي صادر من النظام - لا يحتاج لتوقيع بريدي"))
+    canvas.drawCentredString(w / 2, 10.5 * mm, ar("مستند آلي صادر من النظام - لا يحتاج لتوقيع بريدي"))
     canvas.restoreState()
 
 
@@ -143,7 +168,7 @@ def _base_doc(buf):
     return SimpleDocTemplate(
         buf, pagesize=A4,
         leftMargin=14 * mm, rightMargin=14 * mm,
-        topMargin=20 * mm, bottomMargin=18 * mm,
+        topMargin=22 * mm, bottomMargin=18 * mm,
         title="نظام الموارد البشرية المتكامل",
         author=_signers()[0],
     )
@@ -168,8 +193,9 @@ def pdf_payslip(record):
 
     # العنوان
     elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
-    elements.append(Spacer(1, 2))
+    elements.extend(_ornament_block(_GOLD))
     elements.append(Paragraph(ar("مفردات المرتب - كشف راتب شهري"), _style('t2', 14, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
     elements.append(Spacer(1, 4))
     elements.append(Paragraph(
         ar(f"فترة: {record.period.name}    |    تاريخ الإصدار: {ar_date(date.today())}"),
@@ -273,7 +299,9 @@ def pdf_payroll(period, records):
 
     elements = []
     elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
     elements.append(Paragraph(ar(f"كشف رواتب فترة {period.name}"), _style('t2', 14, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
     elements.append(Spacer(1, 6))
 
     head = [
@@ -337,8 +365,10 @@ def pdf_attendance(month, year, summary):
 
     elements = []
     elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
     elements.append(Paragraph(ar(f"تقرير الحضور والانصراف - شهر {month_name} {year}"),
                               _style('t2', 14, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
     elements.append(Spacer(1, 6))
 
     head = [[ar("م"), ar("رقم الموظف"), ar("الاسم"), ar("القسم"),
@@ -380,8 +410,10 @@ def pdf_insurance_tax(period, records):
 
     elements = []
     elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
     elements.append(Paragraph(ar(f"كشف التأمينات الاجتماعية وضريبة كسب العمل - فترة {period.name}"),
                               _style('t2', 13, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
     elements.append(Spacer(1, 6))
 
     head = [[ar("م"), ar("رقم"), ar("الاسم"), ar("المرتب التأميني"),
@@ -436,6 +468,7 @@ def pdf_leave_certificate(leave):
     # إطار زخرفي
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(ar(company), _style('t1', 16, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
     elements.append(Paragraph(ar("يفيد بأن"), _style('t2', 10, color=colors.HexColor('#475569'), align=1)))
     elements.append(Spacer(1, 4))
     elements.append(Paragraph(ar(emp.full_name), _style('name', 22, True, colors.HexColor('#1E3A8A'), align=1)))

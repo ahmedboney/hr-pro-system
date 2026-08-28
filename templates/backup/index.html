@@ -46,10 +46,15 @@
                 <div class="form-help">
                     الحجم: {{ (last_backup.size / 1024)|round(1) }} KB — التوقيت: {{ last_backup.date }} {{ last_backup.time }}
                 </div>
-                <div style="display:flex; gap:8px; margin-top:6px;">
+                <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
                     <a href="{{ url_for('backup_download', filename=last_backup.filename) }}" class="btn btn-sm btn-outline">
                         <i class="fas fa-download"></i> تحميل
                     </a>
+                    <form method="POST" action="{{ url_for('backup_restore', filename=last_backup.filename) }}" onsubmit="return confirm('سيتم استبدال قاعدة البيانات الحالية بهذه النسخة. هل أنت متأكد؟')" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-warning">
+                            <i class="fas fa-rotate-left"></i> استعادة هذه النسخة
+                        </button>
+                    </form>
                 </div>
             </div>
             {% else %}

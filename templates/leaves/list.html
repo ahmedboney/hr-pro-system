@@ -85,10 +85,6 @@
                                 </form>
                                 <button class="btn btn-sm btn-outline" onclick="openModal('review-{{ req.id }}')" title="اعتماد مع ملاحظات"><i class="fas fa-stamp"></i></button>
                             </div>
-                            {% elif req.status == 'approved' %}
-                            <a href="{{ url_for('certificate_leave', req_id=req.id) }}" class="btn btn-sm btn-outline" title="شهادة إجازة"><i class="fas fa-scroll"></i></a>
-                            {% endif %}
-
                             <div class="modal-overlay" id="review-{{ req.id }}">
                                 <div class="modal">
                                     <div class="modal-header">
@@ -114,6 +110,8 @@
                                     </form>
                                 </div>
                             </div>
+                            {% elif req.status == 'approved' %}
+                            <a href="{{ url_for('certificate_leave', req_id=req.id) }}" class="btn btn-sm btn-outline" title="شهادة إجازة"><i class="fas fa-scroll"></i></a>
                             {% else %}
                             <span class="muted small">{{ req.review_notes or '' }}</span>
                             {% endif %}
