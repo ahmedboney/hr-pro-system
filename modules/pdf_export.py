@@ -3,6 +3,7 @@
 """
 import os
 from datetime import date, datetime
+from datetime import timedelta
 from io import BytesIO
 from config import BASE_DIR
 
@@ -471,6 +472,181 @@ def pdf_insurance_tax(period, records):
         ar("تُحتسب التأمينات الاجتماعية بنسبة وارد من إعدادات النظام، وضريبة كسب العمل وفق الشرائح الضريبية المعمول بها. يُرجع هذا الكشف مع الإقرارات الشهرية."),
         _style('n', 8, color=colors.HexColor('#475569'), align=1)
     ))
+
+    doc = _base_doc(buf)
+    doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),
+              onLaterPages=lambda c, d: _footer(c, d, company))
+    return buf.getvalue()
+
+
+# ==================== التقرير الشهري الموحّد PDF ====================
+
+def _days_in_month(year, month):
+    """آخر يوم في الشهر"""
+    if month == 12:
+        return 31
+    return (date(year, month + 1, 1) - timedelta(days=1)).day
+
+
+def pdf_monthly_report(month, year):
+    """تقرير شهري موحّد: رواتب + حضور + إجازات + مكافآت + سلف في مستند واحد"""
+    from models import (db, Employee, Attendance, PayrollPeriod, PayrollRecord,
+                        LeaveRequest, Bonus, Loan)
+    from modules.reports import ReportGenerator
+    buf = BytesIO()
+    company, currency = _init_common("شركتي", "التقرير الشهري الموحّد")
+    month_name = MONTHS_AR[month - 1] if 1 <= month <= 12 else str(month)
+    start = date(year, month, 1)
+    end = date(year, month, _days_in_month(year, month))
+
+    # --- الرواتب ---
+    periods = PayrollPeriod.query.filter_by(period_month=month, period_year=year).all()
+    records = []
+    if periods:
+        records = PayrollRecord.query.filter(
+            PayrollRecord.period_id.in_([p.id for p in periods])
+        ).order_by(PayrollRecord.net_salary.desc()).all()
+
+    # --- الحضور ---
+    att_summary = ReportGenerator.monthly_attendance_summary(month, year)
+
+    # --- الإجازات المعتمدة ---
+    leaves = LeaveRequest.query.filter(
+        LeaveRequest.status == 'approved',
+        LeaveRequest.start_date >= start,
+        LeaveRequest.end_date <= end,
+    ).all()
+    leave_by_type = {}
+    for lv in leaves:
+        name = lv.leave_type.name if lv.leave_type else 'إجازة'
+        item = leave_by_type.setdefault(name, {'count': 0, 'days': 0})
+        item['count'] += 1
+        item['days'] += lv.days_count
+
+    # --- المكافآت والسلف ---
+    bonuses = Bonus.query.filter(Bonus.date >= start, Bonus.date <= end).all()
+    loans = Loan.query.filter(
+        Loan.start_date >= start, Loan.start_date <= end,
+        Loan.status != 'cancelled',
+    ).all()
+    bonus_total = round(sum(b.amount for b in bonuses), 2)
+    loans_total = round(sum(l.amount for l in loans), 2)
+
+    elements = []
+    elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
+    elements.append(Paragraph(ar(f"التقرير الشهري الموحّد - {month_name} {year}"),
+                              _style('t2', 14, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
+    elements.append(Paragraph(ar(f"فترة التقرير: من {ar_date(start)} إلى {ar_date(end)} | تاريخ الإصدار: {ar_date(date.today())}"),
+                              _style('n', 9, color=colors.HexColor('#475569'), align=1)))
+    elements.append(Spacer(1, 6))
+
+    # --- مؤشرات الشهر ---
+    gross = round(sum(r.gross_salary for r in records), 2)
+    deduct = round(sum(r.total_deductions for r in records), 2)
+    net = round(sum(r.net_salary for r in records), 2)
+    active_emps = Employee.query.filter_by(status='active').count()
+    total_present = sum(a['present_days'] for a in att_summary)
+    total_late = sum(a['late_days'] for a in att_summary)
+    total_absent = sum(a['absent_days'] for a in att_summary)
+    total_ot = round(sum(a['overtime_hours'] for a in att_summary), 2)
+    leave_days = sum(i['days'] for i in leave_by_type.values())
+
+    elements.append(Paragraph(ar("أولاً: مؤشرات الشهر"), _style('h1', 11, True, COLOR_HEADER)))
+    kpi = [
+        [ar("البيان"), ar("القيمة"), ar("البيان"), ar("القيمة")],
+        [ar("الموظفون النشطون"), f"{active_emps}", ar("فترات الرواتب"), f"{len(periods)}"],
+        [ar("إجمالي المرتبات"), f"{gross:,.2f}", ar("إجمالي الخصومات"), f"{deduct:,.2f}"],
+        [ar("صافي الرواتب"), f"{net:,.2f} {currency}", ar("أيام الحضور"), f"{total_present}"],
+        [ar("أيام التأخير"), f"{total_late}", ar("أيام الغياب (تقديري)"), f"{total_absent}"],
+        [ar("ساعات إضافية"), f"{total_ot}", ar("أيام إجازات معتمدة"), f"{leave_days}"],
+        [ar("مكافآت الشهر"), f"{bonus_total:,.2f}", ar("سلف منحه الشهر"), f"{loans_total:,.2f}"],
+    ]
+    t = _table(kpi, col_widths=[45 * mm, 42 * mm, 45 * mm, 42 * mm], aligns=[1, 2, 1, 2])
+    t.setStyle(TableStyle([('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F8FAFC'))]))
+    elements.append(t)
+    elements.append(Spacer(1, 8))
+
+    # --- كشف الرواتب ---
+    if records:
+        elements.append(Paragraph(ar("ثانياً: كشف الرواتب"), _style('h1', 11, True, COLOR_HEADER)))
+        head = [[ar("م"), ar("الاسم"), ar("الأساسي"), ar("الإجمالي"), ar("الخصومات"), ar("السلف"), ar("الصافي")]]
+        rows = []
+        for i, rec in enumerate(records, start=1):
+            emp = rec.employee
+            allow = round(rec.housing_allowance + rec.transport_allowance +
+                          rec.food_allowance + rec.phone_allowance + rec.other_allowances, 2)
+            rows.append([
+                i, _tc(emp.full_name if emp else '—'), f"{rec.base_salary:,.2f}",
+                f"{rec.gross_salary:,.2f}",
+                f"{round(rec.total_deductions - rec.loan_deduction, 2):,.2f}",
+                f"{rec.loan_deduction:,.2f}", f"{rec.net_salary:,.2f}",
+            ])
+        rows.append([
+            ar("الإجمالي"), "", f"{sum(r.base_salary for r in records):,.2f}",
+            f"{gross:,.2f}", f"{round(deduct - sum(r.loan_deduction for r in records), 2):,.2f}",
+            f"{sum(r.loan_deduction for r in records):,.2f}", f"{net:,.2f}",
+        ])
+        t = _table(head + rows, col_widths=[8 * mm, 36 * mm, 18 * mm, 20 * mm, 20 * mm, 16 * mm, 22 * mm],
+                   aligns=[1, 1, 2, 2, 2, 2, 2], split_by_row=True)
+        t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
+                               ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
+                               ('FONTSIZE', (0, 0), (-1, -1), 8)]))
+        elements.append(t)
+        elements.append(Spacer(1, 8))
+
+    # --- ملخص الحضور ---
+    if att_summary:
+        elements.append(Paragraph(ar("ثالثاً: ملخص الحضور والانصراف"), _style('h1', 11, True, COLOR_HEADER)))
+        head = [[ar("م"), ar("الاسم"), ar("حضور"), ar("تأخير"), ar("غياب"), ar("إضافي"), ar("النسبة%")]]
+        rows = []
+        for i, item in enumerate(att_summary, start=1):
+            emp = item['employee']
+            rows.append([
+                i, _tc(emp.full_name), item['present_days'], item['late_days'],
+                item['absent_days'], item['overtime_hours'], item['attendance_rate'],
+            ])
+        rows.append([
+            ar("الإجمالي"), "", total_present, total_late, total_absent, total_ot, "",
+        ])
+        t = _table(head + rows, col_widths=[8 * mm, 38 * mm, 14 * mm, 14 * mm,
+                                            14 * mm, 18 * mm, 20 * mm],
+                   aligns=[1, 1, 2, 2, 2, 2, 2], split_by_row=True)
+        t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
+                               ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
+                               ('FONTSIZE', (0, 0), (-1, -1), 8)]))
+        elements.append(t)
+        elements.append(Spacer(1, 8))
+
+    # --- الإجازات والمكافآت والسلف ---
+    has_extra = bool(leave_by_type) or bonuses or loans
+    if has_extra:
+        elements.append(Paragraph(ar("رابعاً: إجازات ومكافآت وسلف الشهر"), _style('h1', 11, True, COLOR_HEADER)))
+        extras = [
+            [ar("البيان"), ar("العدد"), ar("القيمة / الأيام")],
+        ]
+        for name, item in leave_by_type.items():
+            extras.append([_tc(f"إجازة: {name}"), item['count'], f"{item['days']} يوم"])
+        if bonuses:
+            extras.append([ar("مكافآت وحوافز"), len(bonuses), f"{bonus_total:,.2f}"])
+        if loans:
+            extras.append([ar("سلف وقروض منحه"), len(loans), f"{loans_total:,.2f}"])
+        t = _table(extras, col_widths=[90 * mm, 30 * mm, 46 * mm], aligns=[1, 1, 2],
+                   split_by_row=True)
+        elements.append(t)
+
+    fin_full, hr_full = _signers()
+    sign = [
+        [ar(fin_full), ar(hr_full)],
+        ["", ""],
+    ]
+    t = _table(sign, col_widths=[83 * mm, 83 * mm], aligns=[1, 1])
+    t.setStyle(TableStyle([('LINEABOVE', (0, 1), (0, 1), 0.6, COLOR_LINE),
+                           ('LINEABOVE', (1, 1), (1, 1), 0.6, COLOR_LINE),
+                           ('TOPPADDING', (0, 1), (-1, 1), 12)]))
+    elements.append(Spacer(1, 10))
+    elements.append(t)
 
     doc = _base_doc(buf)
     doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),

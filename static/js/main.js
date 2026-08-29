@@ -147,3 +147,26 @@ function flash(message, category) {
         setTimeout(() => div.remove(), 400);
     }, 2500);
 }
+
+// البحث السريع في الجداول (بحث فوري بفلترة الصفوف)
+function filterRows(input, tableId) {
+    const q = (input.value || '').toString().trim().toLowerCase();
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = table.querySelectorAll('tbody tr');
+    let shown = 0;
+    rows.forEach(row => {
+        const hay = (row.textContent || '').toLowerCase();
+        const match = !q || hay.indexOf(q) !== -1;
+        row.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const empty = document.getElementById(tableId + '-empty');
+    if (empty) empty.style.display = shown === 0 ? '' : 'none';
+}
+
+// زر إظهار/إخفاء كلمة المرور
+function togglePassword(id) {
+    const el = document.getElementById(id);
+    if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}

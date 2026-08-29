@@ -202,6 +202,13 @@
     </div>
     <div class="card-body">
         <div class="grid grid-3">
+            <a href="{{ url_for('export_monthly_pdf', month=today.month, year=today.year) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                    <i class="fas fa-file-pdf" style="font-size:24px; color:var(--danger);"></i>
+                    <span>التقرير الشهري الموحّد (PDF)</span>
+                    <small class="muted">رواتب + حضور + إجازات + مكافآت في مستند واحد</small>
+                </div>
+            </a>
             <a href="{{ url_for('export_attendance_pdf', month=today.month, year=today.year) }}" class="btn btn-outline btn-lg" style="justify-content:center; padding:18px;">
                 <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                     <i class="fas fa-file-pdf" style="font-size:24px; color:var(--danger);"></i>

@@ -34,7 +34,9 @@
                         <td>{{ u.full_name }}</td>
                         <td>
                             {% if u.role == 'admin' %}<span class="badge badge-danger"><i class="fas fa-crown"></i> مدير النظام</span>
-                            {% elif u.role == 'hr' %}<span class="badge badge-primary"><i class="fas fa-user-tie"></i> HR</span>
+                            {% elif u.role == 'hr' %}<span class="badge badge-primary"><i class="fas fa-user-tie"></i> موارد بشرية</span>
+                            {% elif u.role == 'account' %}<span class="badge badge-warning"><i class="fas fa-calculator"></i> محاسب / شؤون مالية</span>
+                            {% elif u.role == 'viewer' %}<span class="badge badge-gray"><i class="fas fa-eye"></i> مشاهدة فقط</span>
                             {% else %}<span class="badge badge-gray">موظف</span>{% endif %}
                         </td>
                         <td>
@@ -89,8 +91,9 @@
                 <div class="form-group">
                     <label>الصلاحية</label>
                     <select name="role" class="form-control">
-                        <option value="hr">مدير الموارد البشرية</option>
-                        <option value="employee">موظف</option>
+                        <option value="hr">موارد بشرية</option>
+                        <option value="account">محاسب / شؤون مالية</option>
+                        <option value="viewer">مشاهدة فقط</option>
                         <option value="admin">مدير النظام</option>
                     </select>
                 </div>

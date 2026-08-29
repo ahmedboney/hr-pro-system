@@ -392,3 +392,15 @@ class OvertimeRequest(db.Model):
         if self.hours:
             return round(self.hours * self.employee.hourly_rate * self.rate_multiplier, 2)
         return 0
+
+
+class AuditLog(db.Model):
+    """سجل النشاط: توثيق كل إجراء مهم (من فعل ماذا ومتى)"""
+    __tablename__ = 'audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), nullable=False)
+    user_role = db.Column(db.String(20), nullable=False, default='')
+    action = db.Column(db.String(120), nullable=False)
+    details = db.Column(db.String(400), default='')
+    ip = db.Column(db.String(45), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)

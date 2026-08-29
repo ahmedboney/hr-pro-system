@@ -104,6 +104,11 @@
             <a href="{{ url_for('insurance_report') }}" class="nav-item {% if request.endpoint == 'insurance_report' or request.endpoint == 'export_insurance_xlsx' %}active{% endif %}">
                 <i class="fas fa-file-invoice-dollar"></i> التأمينات والضرائب
             </a>
+            {% if current_user.role in ['admin', 'hr', 'account'] %}
+            <a href="{{ url_for('audit_log') }}" class="nav-item {% if request.endpoint == 'audit_log' %}active{% endif %}">
+                <i class="fas fa-history"></i> سجل النشاط
+            </a>
+            {% endif %}
             {% if current_user.role in ['admin', 'hr'] %}
             <a href="{{ url_for('settings_index') }}" class="nav-item {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}">
                 <i class="fas fa-cog"></i> الإعدادات
@@ -160,6 +165,8 @@
                         <div class="role">
                             {% if current_user.role == 'admin' %}مدير النظام
                             {% elif current_user.role == 'hr' %}مدير الموارد البشرية
+                            {% elif current_user.role == 'account' %}محاسب / شؤون مالية
+                            {% elif current_user.role == 'viewer' %}مشاهدة فقط
                             {% else %}موظف{% endif %}
                         </div>
                     </div>

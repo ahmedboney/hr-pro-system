@@ -17,7 +17,8 @@ from config import Config
 from models import (
     db, User, Department, Position, Employee, FingerprintDevice, Attendance,
     LeaveType, LeaveRequest, LeaveBalance, DeductionType, BonusType, Bonus,
-    PayrollPeriod, PayrollRecord, Loan, LoanPayment, Setting, OvertimeRequest
+    PayrollPeriod, PayrollRecord, Loan, LoanPayment, Setting, OvertimeRequest,
+    AuditLog
 )
 from modules.fingerprint import FingerprintManager, SimulatorDevice
 from modules.payroll import PayrollCalculator
@@ -37,6 +38,15 @@ db.init_app(app)
 # ==================== Helper Functions ====================
 
 DEMO_MODE = bool(getattr(Config, 'DEMO_MODE', False))
+
+# ===== الصلاحيات: admin كامل | hr موارد بشرية | account شؤون مالية | viewer عرض فقط =====
+VALID_ROLES = {
+    'admin': 'مدير النظام',
+    'hr': 'موارد بشرية',
+    'account': 'محاسب / شؤون مالية',
+    'viewer': 'مشاهدة فقط',
+}
+ROLE_LEVEL = {'admin': 100, 'hr': 60, 'account': 50, 'viewer': 0}
 
 
 def auto_login():
@@ -114,6 +124,27 @@ def get_current_user():
     return User.query.get(user_id) if user_id else None
 
 
+def log_action(action, details=''):
+    """توثيق إجراء في سجل النشاط (لا يُفشِل العملية أبداً عند أي خطأ)"""
+    try:
+        from flask import request as _req
+        user = get_current_user()
+        entry = AuditLog(
+            username=(user.username if user else '—'),
+            user_role=(user.role if user else '—'),
+            action=str(action)[:120],
+            details=str(details)[:400],
+            ip=(_req.remote_addr or '')[:45],
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+
 @app.context_processor
 def inject_user():
     return {
@@ -170,6 +201,46 @@ def verify_csrf():
                 return jsonify({'error': 'رمز CSRF غير صالح أو مفقود'}), 403
             flash('انتهت صلاحية النموذج، حاول مرة أخرى', 'danger')
             return redirect(request.referrer or url_for('dashboard'))
+    return None
+
+
+@app.before_request
+def enforce_viewer_readonly():
+    """حساب «مشاهدة فقط» لا يستطيع تعديل أو حذف أي شيء (قراءة فقط شاملة)"""
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return None
+    if request.path.startswith(('/login', '/logout')):
+        return None
+    uid = session.get('user_id')
+    user = User.query.get(uid) if uid else None
+    if user and user.role == 'viewer':
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'حساب العرض فقط، التعديل غير مسموح'}), 403
+        flash('حسابك للعرض فقط — لا يمكنك تنفيذ تعديلات', 'danger')
+        return redirect(request.referrer or url_for('dashboard'))
+    return None
+
+
+_ACCOUNT_BLOCKED_PREFIXES = (
+    '/employees', '/departments', '/positions',
+    '/attendance', '/leaves', '/fingerprint', '/settings',
+)
+
+
+@app.before_request
+def enforce_account_scope():
+    """دور «محاسب/شؤون مالية» يقرأ كل شيء لكن لا يعدّل الموظفين/الحضور/الإجازات/الإعدادات"""
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return None
+    if request.path.startswith(('/login', '/logout')):
+        return None
+    uid = session.get('user_id')
+    user = User.query.get(uid) if uid else None
+    if user and user.role == 'account':
+        for prefix in _ACCOUNT_BLOCKED_PREFIXES:
+            if request.path.startswith(prefix):
+                flash('حساب المحاسب لا يملك صلاحية تنفيذ هذا التعديل', 'danger')
+                return redirect(request.referrer or url_for('dashboard'))
     return None
 
 
@@ -323,6 +394,7 @@ def _do_login():
         session['role'] = user.role
         session['_csrf_token'] = csrf_token()
         _login_attempts.pop(ip, None)
+        log_action('تسجيل دخول', f"الدخول بواسطة {username}")
         return redirect(url_for('dashboard'))
     if user and not user.is_active:
         flash('هذا الحساب موقوف', 'danger')
@@ -516,6 +588,7 @@ def employee_new():
                     ))
 
             db.session.commit()
+            log_action('إضافة موظف', f"{emp.full_name} — {emp.emp_id}")
             flash(f"تم إضافة الموظف {emp.full_name} بنجاح", 'success')
             return redirect(url_for('employee_view', emp_id=emp.id))
         except Exception as e:
@@ -608,6 +681,7 @@ def employee_edit(emp_id):
                     return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=True)
 
             db.session.commit()
+            log_action('تعديل موظف', f"{emp.full_name} — {emp.emp_id}")
             flash(f"تم تحديث بيانات {emp.full_name} بنجاح", 'success')
             return redirect(url_for('employee_view', emp_id=emp.id))
         except Exception as e:
@@ -624,6 +698,7 @@ def employee_delete(emp_id):
     name = emp.full_name
     emp.status = 'terminated'
     db.session.commit()
+    log_action('إنهاء خدمة موظف', f"{name} — {emp.emp_id}")
     flash(f"تم أنهاء خدمة الموظف {name}", 'info')
     return redirect(url_for('employees_list'))
 
@@ -1071,6 +1146,18 @@ def export_attendance_pdf():
     return send_pdf(data, f"تقرير_الحضور_{year}_{month:02d}.pdf")
 
 
+@app.route('/export/pdf/monthly')
+@login_required
+def export_monthly_pdf():
+    """التقرير الشهري الموحّد PDF (رواتب + حضور + إجازات + مكافآت + سلف)"""
+    month = request.args.get('month', date.today().month, type=int)
+    year = request.args.get('year', date.today().year, type=int)
+    if not (1 <= month <= 12):
+        month = date.today().month
+    data = pdf_export.pdf_monthly_report(month, year)
+    return send_pdf(data, f"التقرير_الشهري_{year}_{month:02d}.pdf")
+
+
 @app.route('/export/pdf/insurance/<int:period_id>')
 @login_required
 def export_insurance_pdf(period_id):
@@ -1237,6 +1324,7 @@ def backup_index():
 def backup_create():
     notes = request.form.get('notes', '').strip() or 'نسخة يدوية'
     dest, filename = backup_module.create_backup(notes=notes)
+    log_action('نسخ احتياطي', f"إنشاء {filename}")
     flash(f"تم إنشاء النسخة الاحتياطية {filename}", 'success')
     return redirect(url_for('backup_index'))
 
@@ -1269,6 +1357,7 @@ def backup_restore(filename):
     safe = os.path.basename(filename)
     try:
         backup_module.restore_backup(safe)
+        log_action('استعادة نسخة', f"استعادة {safe}")
         flash('تمت استعادة قاعدة البيانات من النسخة الاحتياطية', 'success')
     except Exception as e:
         flash(f"تعذرت الاستعادة: {str(e)}", 'danger')
@@ -1295,10 +1384,35 @@ def system_wipe():
     from init_db import wipe_all_data
     ok = wipe_all_data()
     if ok:
+        log_action('مسح البيانات', 'إعادة ضبط النظام: مسح جميع البيانات والبدء من جديد')
         flash('تم مسح جميع بيانات النظام وإعادة تهيئته من جديد — يمكنك البدء بالتسجيل', 'success')
     else:
         flash('حدث خطأ أثناء المسح، لم تُمسح البيانات', 'danger')
     return redirect(url_for('dashboard'))
+
+
+# ==================== سجل النشاط (Audit Log) ====================
+
+@app.route('/audit')
+@login_required
+def audit_log():
+    action = request.args.get('action', '')
+    keyword = request.args.get('q', '').strip()
+    days = request.args.get('days', 30, type=int)
+    query = AuditLog.query
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if keyword:
+        query = query.filter(db.or_(
+            AuditLog.details.contains(keyword),
+            AuditLog.username.contains(keyword),
+        ))
+    since = datetime.now() - timedelta(days=max(1, min(365, days)))
+    query = query.filter(AuditLog.created_at >= since).order_by(AuditLog.created_at.desc())
+    logs = query.limit(500).all()
+    actions = [r[0] for r in db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()]
+    return render_template('audit.html', logs=logs, actions=actions,
+                           action=action, keyword=keyword, days=days)
 
 
 # ==================== Leaves ====================
@@ -1407,6 +1521,7 @@ def leave_action(req_id):
         flash('تم إلغاء الطلب', 'info')
 
     db.session.commit()
+    log_action('إجازة: ' + req.status, f"موظف {req.employee.full_name} — {req.leave_type.name} ({req.days_count} يوم)" if req.employee else '')
     return redirect(url_for('leaves_list'))
 
 
@@ -1482,6 +1597,7 @@ def payroll_process(period_id):
     period.status = 'processed'
     period.processed_at = datetime.now()
     db.session.commit()
+    log_action('احتساب رواتب', f"فترة {period.name} — {len(records)} موظف")
     flash(f"تم احتساب رواتب {len(records)} موظفاً بنجاح", 'success')
     return redirect(url_for('payroll_details', period_id=period_id))
 
@@ -1635,6 +1751,7 @@ def loan_action(loan_id):
         else:
             flash('المبلغ غير صحيح', 'danger')
     db.session.commit()
+    log_action('سلفة/قرض: ' + action, f"موظف {loan.employee.full_name} — {loan.amount:,.2f}")
     return redirect(url_for('loans_list'))
 
 
@@ -1785,7 +1902,9 @@ def user_new():
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '')
     full_name = request.form.get('full_name', '').strip()
-    role = request.form.get('role', 'employee')
+    role = request.form.get('role', 'viewer')
+    if role not in VALID_ROLES:
+        role = 'viewer'
 
     if not username or not password:
         flash('اسم المستخدم وكلمة المرور مطلوبان', 'danger')
@@ -1796,6 +1915,7 @@ def user_new():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        log_action('إضافة مستخدم', f"{username} — {VALID_ROLES.get(role, role)}")
         flash(f'تم إنشاء المستخدم {username}', 'success')
     return redirect(url_for('users_list'))
 

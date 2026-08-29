@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}سجل النشاط{% endblock %}
+{% block page_title %}سجل النشاط (من فعل ماذا ومتى){% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" class="flex gap-8" style="align-items:center;">
+        <select name="action" class="form-control" onchange="this.form.submit()">
+            <option value="">كل الإجراءات</option>
+            {% for a in actions %}
+            <option value="{{ a }}" {% if a == action %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+        <select name="days" class="form-control" onchange="this.form.submit()">
+            <option value="7" {% if days == 7 %}selected{% endif %}>آخر 7 أيام</option>
+            <option value="30" {% if days == 30 %}selected{% endif %}>آخر 30 يوم</option>
+            <option value="90" {% if days == 90 %}selected{% endif %}>آخر 90 يوم</option>
+            <option value="365" {% if days == 365 %}selected{% endif %}>آخر سنة</option>
+        </select>
+        <input type="search" name="q" class="form-control" value="{{ keyword }}" placeholder="بحث في المستخدمين أو التفاصيل..." style="min-width:220px;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> بحث</button>
+        {% if action or keyword or days != 30 %}
+        <a href="{{ url_for('audit_log') }}" class="btn btn-outline"><i class="fas fa-rotate-left"></i> الكل</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-history" style="color:var(--info); margin-left:8px;"></i> الأحداث المسجلة ({{ logs|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if logs %}
+        <div class="table-wrap">
+<input type="search" class="form-control table-search" placeholder="بحث سريع..." oninput="filterRows(this, 'dataTable')">
+<table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>الوقت</th>
+                        <th>المستخدم</th>
+                        <th>الدور</th>
+                        <th>الإجراء</th>
+                        <th>التفاصيل</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="muted nowrap">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td class="bold">{{ log.username }}</td>
+                        <td>
+                            {% if log.user_role == 'admin' %}<span class="badge badge-danger">مدير النظام</span>
+                            {% elif log.user_role == 'hr' %}<span class="badge badge-primary">موارد بشرية</span>
+                            {% elif log.user_role == 'account' %}<span class="badge badge-warning">محاسب</span>
+                            {% elif log.user_role == 'viewer' %}<span class="badge badge-secondary">مشاهدة فقط</span>
+                            {% else %}<span class="badge badge-secondary">{{ log.user_role or '—' }}</span>{% endif %}
+                        </td>
+                        <td><span class="badge badge-outline">{{ log.action }}</span></td>
+                        <td class="muted">{{ log.details or '—' }}</td>
+                        <td class="muted nowrap">{{ log.ip or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-history"></i><h4>لا توجد أحداث مسجلة</h4></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

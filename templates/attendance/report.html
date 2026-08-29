@@ -28,7 +28,8 @@
     <div class="card-body" style="padding: 0;">
         {% if summary %}
         <div class="table-wrap">
-            <table>
+<input type="search" class="form-control table-search" placeholder="بحث سريع..." oninput="filterRows(this, 'dataTable')">
+<table id="dataTable">
                 <thead>
                     <tr>
                         <th>#</th>

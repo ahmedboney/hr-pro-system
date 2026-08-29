@@ -474,6 +474,16 @@ a {
     overflow-x: auto;
 }
 
+.table-search {
+    width: 240px;
+    max-width: calc(100% - 28px);
+    margin: 12px 14px 0;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
