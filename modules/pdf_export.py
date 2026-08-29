@@ -4,6 +4,7 @@
 import os
 from datetime import date, datetime
 from io import BytesIO
+from config import BASE_DIR
 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
@@ -16,18 +17,32 @@ from reportlab.platypus import (
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# ---------- خطوط تدعم العربية ----------
-FONT_NAME = 'Arial'  # Arial في ويندوز يدعم الحروف العربية
-FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
-FONT_BOLD_PATH = r"C:\Windows\Fonts\arialbd.ttf"
-if not os.path.exists(FONT_PATH):
-    FONT_PATH = FONT_BOLD_PATH
+# ---------- خطوط تدعم العربية (بحث: الخط المرفق → ويندوز → لينكس/Noto) ----------
+FONT_NAME = 'Arial'  # Arial يدعم الحروف العربية
+_FONT_CANDIDATES = (
+    os.path.join(BASE_DIR, 'fonts', 'arial.ttf'),
+    r"C:\Windows\Fonts\arial.ttf",
+    '/usr/share/fonts/truetype/msttcorefonts/Arial.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+)
+_FONT_BOLD_CANDIDATES = (
+    os.path.join(BASE_DIR, 'fonts', 'arialbd.ttf'),
+    r"C:\Windows\Fonts\arialbd.ttf",
+    '/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+)
+FONT_PATH = next((p for p in _FONT_CANDIDATES if os.path.exists(p)), None)
+FONT_BOLD_PATH = next((p for p in _FONT_BOLD_CANDIDATES if os.path.exists(p)), None)
+FONT_PATH = FONT_PATH or FONT_BOLD_PATH
+FONT_BOLD_PATH = FONT_BOLD_PATH or FONT_PATH
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-pdfmetrics.registerFont(TTFont('Ar', FONT_PATH))
-pdfmetrics.registerFont(TTFont('ArBd', FONT_BOLD_PATH))
-pdfmetrics.registerFontFamily('Ar', normal='Ar', bold='ArBd')
+if FONT_PATH:
+    pdfmetrics.registerFont(TTFont('Ar', FONT_PATH))
+    pdfmetrics.registerFont(TTFont('ArBd', FONT_BOLD_PATH or FONT_PATH))
+    pdfmetrics.registerFontFamily('Ar', normal='Ar', bold='ArBd')
 
 
 COLOR_HEADER = colors.HexColor('#1E3A8A')
