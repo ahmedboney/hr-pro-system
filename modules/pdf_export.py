@@ -61,6 +61,13 @@ def ar(text):
     return get_display(arabic_reshaper.reshape(text))
 
 
+def _tc(v):
+    """نص جدول: أي قيمة → نص عربي منضبط (للأسماء/الأقسام/الوظائف في الصفوف)"""
+    if v is None or str(v).strip() == '':
+        v = '—'
+    return ar(v)
+
+
 MONTHS_AR = [
     "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
     "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
@@ -84,9 +91,9 @@ def _style(name, size=10, bold=False, color=colors.black, align=2, leading=None)
 _ALIGN_MAP = {0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 4: 'JUSTIFY'}
 
 
-def _table(data, col_widths=None, aligns=None, header_bold=True):
+def _table(data, col_widths=None, aligns=None, header_bold=True, split_by_row=False):
     """جدول منسق بخلفية رأس كحلية وصفوف مخططة"""
-    t = Table(data, colWidths=col_widths, repeatRows=1)
+    t = Table(data, colWidths=col_widths, repeatRows=1, splitByRow=split_by_row)
     style = [
         # أهم إصلاح: كل خلايا الجدول بخط Arial العربي افتراضياً
         # (فبدون ذلك تُطبع الخلايا بخط Helvetica الافتراضي ولا تظهر العربية)
@@ -331,7 +338,7 @@ def pdf_payroll(period, records):
         extra = round(rec.overtime_amount + rec.bonus_amount, 2)
         ded = round(rec.total_deductions - rec.loan_deduction, 2)
         rows.append([
-            i, emp.emp_id, emp.full_name, f"{rec.base_salary:,.2f}",
+            i, emp.emp_id, _tc(emp.full_name), f"{rec.base_salary:,.2f}",
             f"{allow:,.2f}", f"{extra:,.2f}",
             f"{rec.gross_salary:,.2f}", f"{ded:,.2f}",
             f"{rec.loan_deduction:,.2f}", f"{rec.net_salary:,.2f}",
@@ -351,9 +358,9 @@ def pdf_payroll(period, records):
         sum(r.net_salary for r in records),
     ]))
 
-    t = _table(head + rows, col_widths=[10 * mm, 16 * mm, 38 * mm, 18 * mm, 18 * mm,
-                                         18 * mm, 20 * mm, 20 * mm, 18 * mm, 22 * mm],
-               aligns=[1, 1, 1, 2, 2, 2, 2, 2, 2, 2])
+    t = _table(head + rows, col_widths=[9 * mm, 15 * mm, 35 * mm, 16 * mm, 16 * mm,
+                                         15 * mm, 18 * mm, 18 * mm, 16 * mm, 20 * mm],
+               aligns=[1, 1, 1, 2, 2, 2, 2, 2, 2, 2], split_by_row=True)
     t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
                            ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                            ('FONTSIZE', (0, 0), (-1, -1), 7.5)]))
@@ -392,8 +399,8 @@ def pdf_attendance(month, year, summary):
     for i, item in enumerate(summary, start=1):
         emp = item['employee']
         rows.append([
-            i, emp.emp_id, emp.full_name,
-            emp.department.name if emp.department else "—",
+            i, emp.emp_id, _tc(emp.full_name),
+            _tc(emp.department.name if emp.department else '—'),
             item['present_days'], item['late_days'], item['absent_days'],
             item['overtime_hours'], item['attendance_rate'],
         ])
@@ -403,9 +410,9 @@ def pdf_attendance(month, year, summary):
         round(sum(r[7] for r in rows), 2), "",
     ])
 
-    t = _table(head + rows, col_widths=[10 * mm, 18 * mm, 42 * mm, 30 * mm,
-                                         16 * mm, 16 * mm, 16 * mm, 22 * mm, 22 * mm],
-               aligns=[1, 1, 1, 1, 2, 2, 2, 2, 2])
+    t = _table(head + rows, col_widths=[9 * mm, 17 * mm, 42 * mm, 28 * mm,
+                                         14 * mm, 14 * mm, 14 * mm, 20 * mm, 20 * mm],
+               aligns=[1, 1, 1, 1, 2, 2, 2, 2, 2], split_by_row=True)
     t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
                            ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                            ('FONTSIZE', (0, 0), (-1, -1), 8)]))
@@ -437,7 +444,7 @@ def pdf_insurance_tax(period, records):
     for i, rec in enumerate(records, start=1):
         emp = rec.employee
         rows.append([
-            i, emp.emp_id, emp.full_name,
+            i, emp.emp_id, _tc(emp.full_name),
             f"{rec.base_salary + rec.housing_allowance:,.2f}",
             f"{rec.social_insurance:,.2f}",
             f"{rec.social_insurance:,.2f}",
@@ -451,9 +458,9 @@ def pdf_insurance_tax(period, records):
         f"{sum(rec.tax_amount for rec in records):,.2f}",
     ])
 
-    t = _table(head + rows, col_widths=[10 * mm, 16 * mm, 40 * mm, 36 * mm,
-                                         32 * mm, 38 * mm, 36 * mm],
-               aligns=[1, 1, 1, 2, 2, 2, 2])
+    t = _table(head + rows, col_widths=[8 * mm, 14 * mm, 36 * mm, 31 * mm,
+                                         27 * mm, 31 * mm, 31 * mm],
+               aligns=[1, 1, 1, 2, 2, 2, 2], split_by_row=True)
     t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
                            ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                            ('FONTSIZE', (0, 0), (-1, -1), 8)]))

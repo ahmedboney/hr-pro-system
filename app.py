@@ -119,6 +119,7 @@ def inject_user():
     return {
         'current_user': get_current_user(),
         'today': date.today(),
+        'demo_mode': DEMO_MODE,
     }
 
 
@@ -1272,6 +1273,32 @@ def backup_restore(filename):
     except Exception as e:
         flash(f"تعذرت الاستعادة: {str(e)}", 'danger')
     return redirect(url_for('backup_index'))
+
+
+# ==================== إعادة ضبط النظام (مسح كل البيانات) ====================
+
+@app.route('/system/wipe', methods=['POST'])
+@login_required
+def system_wipe():
+    """مسح جميع بيانات النظام والبدء من جديد (تصفير الداتا والتسجيل من جديد).
+    متاح لأدمن النظام دائماً، ولحساب العرض التجريبي (demo) في وضع DEMO_MODE.
+    يتطلب كتابة كلمة التأكيد «امسح» + كلمة المرور الحالية لمنع المسح بالخطأ."""
+    if not (DEMO_MODE or (get_current_user() and get_current_user().role == 'admin')):
+        flash('غير مصرح لك بتنفيذ هذا الإجراء', 'danger')
+        return redirect(url_for('dashboard'))
+    confirm_word = request.form.get('confirm_text', '').strip()
+    password = request.form.get('password', '')
+    user = get_current_user()
+    if confirm_word != 'امسح' or not user or not user.check_password(password):
+        flash('لم يتم تنفيذ المسح: تأكد من كلمة التأكيد «امسح» وكلمة المرور', 'danger')
+        return redirect(url_for('dashboard'))
+    from init_db import wipe_all_data
+    ok = wipe_all_data()
+    if ok:
+        flash('تم مسح جميع بيانات النظام وإعادة تهيئته من جديد — يمكنك البدء بالتسجيل', 'success')
+    else:
+        flash('حدث خطأ أثناء المسح، لم تُمسح البيانات', 'danger')
+    return redirect(url_for('dashboard'))
 
 
 # ==================== Leaves ====================

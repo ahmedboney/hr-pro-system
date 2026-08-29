@@ -252,6 +252,8 @@ def seed_demo_data():
     if not getattr(Config, 'DEMO_MODE', False):
         return
     try:
+        if Setting.get('demo_data') == 'off':
+            return
         if Setting.get('demo_seeded') == date.today().isoformat():
             return
         dept_by_name = {d.name: d.id for d in Department.query.all()}
@@ -365,6 +367,51 @@ def reset_demo_data():
     except Exception as e:
         db.session.rollback()
         print(f"[demo reset] {e}")
+
+
+def wipe_all_data():
+    """مسح جميع بيانات النظام والبدء من جديد (واجهة «إعادة ضبط النظام»).
+    يعمل في كل الأوضاع (الديمو والعادي): يمسح الموظفين والحضور والإجازات والرواتب
+    والسلف والمكافآت والتأمينات، ويعيد تهيئة البيانات الافتراضية (الأقسام والوظائف
+    وأنواع الإجازات والإعدادات وفترة الرواتب الحالية) مع الإبقاء على حسابات المستخدمين.
+    بعد المسح يتوقف إدخال البيانات التجريبية تلقائياً لإبقاء الداتا نظيفة للتسجيل من جديد."""
+    try:
+        # 1) فك ارتباط مديري الأقسام أولاً (يُشيرون للموظفين قبل حذفهم)
+        for dept in Department.query.all():
+            dept.manager_id = None
+        db.session.flush()
+        # 2) حذف السجلات التابعة ثم الجداول الرئيسية (ترتيب تصاعدي حسب التبعية)
+        db.session.query(Attendance).delete()
+        db.session.query(LeaveRequest).delete()
+        db.session.query(LeaveBalance).delete()
+        db.session.query(PayrollRecord).delete()
+        db.session.query(LoanPayment).delete()
+        db.session.query(OvertimeRequest).delete()
+        db.session.query(Bonus).delete()
+        db.session.query(Loan).delete()
+        db.session.query(PayrollPeriod).delete()
+        db.session.query(Employee).delete()
+        # 3) التصنيفات والإعدادات (التي سيعيدها الافتراضي لاحقاً)
+        db.session.query(Department).delete()
+        db.session.query(Position).delete()
+        db.session.query(LeaveType).delete()
+        db.session.query(DeductionType).delete()
+        db.session.query(BonusType).delete()
+        db.session.query(AllowanceType).delete()
+        db.session.query(FingerprintDevice).delete()
+        db.session.query(Setting).delete()
+        db.session.commit()
+        # 4) تهيئة البيانات الافتراضية من جديد (أقسام، وظائف، أنواع إجازات، إعدادات، فترة رواتب)
+        seed_default_data()
+        # 5) منع إرجاع البيانات التجريبية تلقائياً بعد المسح (تظل الداتا نظيفة)
+        Setting.set('demo_data', 'off')
+        Setting.set('demo_seeded', date.today().isoformat())
+        print("[+] Wipe completed: system cleared and ready for fresh data entry")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"[wipe] {e}")
+        return False
 
 
 if __name__ == '__main__':

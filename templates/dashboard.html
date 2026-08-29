@@ -233,4 +233,29 @@
         </div>
     </div>
 </div>
+
+{% if demo_mode or (current_user and current_user.role == 'admin') %}
+<div class="card mt-24" style="border:1px solid var(--danger);">
+    <div class="card-header">
+        <h3 style="color:var(--danger);"><i class="fas fa-broom" style="margin-left:8px;"></i>إعادة ضبط النظام (مسح كل البيانات)</h3>
+    </div>
+    <div class="card-body">
+        <p class="form-help" style="margin:0 0 12px;">
+            يمسح جميع الموظفين والحضور والإجازات والرواتب والسلف والمكافآت والتأمينات ويعيد النظام
+            لحالة البداية النظيفة (تبقى الأقسام والوظائف وأنواع الإجازات والإعدادات الافتراضية وحسابات المستخدمين).
+            يُستخدم عند الرغبة في تصفير الداتا والتسجيل من جديد.
+        </p>
+        <form method="POST" action="{{ url_for('system_wipe') }}" onsubmit="return confirm('هل أنت متأكد تماماً من مسح كل بيانات النظام؟ لا يمكن التراجع عن هذا الإجراء.')">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="form-row" style="gap:10px; flex-wrap:wrap;">
+                <input type="text" name="confirm_text" class="form-control" placeholder="اكتب: امسح" style="flex:1; min-width:120px;" required>
+                <input type="password" name="password" class="form-control" placeholder="كلمة المرور الحالية" style="flex:1; min-width:140px;" required>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash-can"></i> مسح كل البيانات وإعادة التعيين
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
