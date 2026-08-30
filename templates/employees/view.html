@@ -59,6 +59,10 @@
                 <div class="salary-row"><span>رقم الموظف</span><span class="bold">{{ emp.emp_id }}</span></div>
                 <div class="salary-row"><span>القسم</span><span class="bold">{{ emp.department.name if emp.department else '—' }}</span></div>
                 <div class="salary-row"><span>المسمى الوظيفي</span><span class="bold">{{ emp.position.title if emp.position else '—' }}</span></div>
+                <div class="salary-row"><span>الوردية</span><span class="bold">
+                    {% if emp.shift_id and emp.shift_obj %}{{ emp.shift_obj.name }} <span class="badge badge-primary">{{ emp.shift_obj.hours_label }}</span>
+                    {% else %}<span class="muted">النظام الموحد</span>{% endif %}
+                </span></div>
                 <div class="salary-row"><span>تاريخ الميلاد</span><span class="bold">{{ fmt_date(emp.birth_date) or '—' }}</span></div>
                 <div class="salary-row"><span>الجنس</span><span class="bold">{{ emp.gender or '—' }}</span></div>
                 <div class="salary-row"><span>الحالة الاجتماعية</span><span class="bold">{{ emp.marital_status or '—' }}</span></div>

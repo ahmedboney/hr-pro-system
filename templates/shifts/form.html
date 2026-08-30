@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل وردية' if is_edit else 'وردية جديدة' }}{% endblock %}
+{% block page_title %}{{ 'تعديل الوردية' if is_edit else 'إضافة وردية جديدة' }}{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('shift_edit', shift_id=shift.id) if is_edit else url_for('shift_new') }}">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-clock" style="color:var(--primary); margin-left:8px;"></i>بيانات الوردية</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم الوردية <span class="required">*</span></label>
+                    <input type="text" name="name" class="form-control" value="{{ shift.name if shift else '' }}" required placeholder="مثال: صباحي / مسائي / ليلي">
+                </div>
+                <div class="form-group">
+                    <label>الحالة</label>
+                    <label class="switch">
+                        <input type="checkbox" name="is_active" {% if not shift or shift.is_active %}checked{% endif %}>
+                        <span class="slider"></span>
+                        <span class="small muted" style="margin-right:10px;">مفعّلة</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>وقت بدء الوردية <span class="required">*</span></label>
+                    <input type="time" name="start_time" class="form-control" value="{{ shift.start_time.strftime('%H:%M') if shift else '08:00' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>وقت نهاية الوردية <span class="required">*</span></label>
+                    <input type="time" name="end_time" class="form-control" value="{{ shift.end_time.strftime('%H:%M') if shift else '17:00' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>سماح التأخير (دقيقة)</label>
+                    <input type="number" name="late_tolerance" class="form-control" value="{{ shift.late_tolerance if shift else 15 }}" min="0">
+                </div>
+                <div class="form-group">
+                    <label>مهلة الانصراف (دقيقة قبل احتساب إضافي)</label>
+                    <input type="number" name="grace_minutes_out" class="form-control" value="{{ shift.grace_minutes_out if shift else 30 }}" min="0">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>وصف مختصر</label>
+                    <input type="text" name="description" class="form-control" value="{{ shift.description if shift else '' }}" placeholder="مثال: الوردية الليلية تمرّ إلى اليوم التالي">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box mt-16" style="border-right:3px solid var(--primary); padding:12px 14px; background:var(--bg-2); border-radius:8px;">
+        <i class="fas fa-info-circle"></i>
+        الموظف الذي تُحدَّد له هذه الوردية يُحسب حضوره وتأخيره وانصرافه وفق مواعيدها، ويقنع كامل. أما الموظفون بلا وردية فيعتمدون على المواعيد الموحدة من الإعدادات.
+    </div>
+
+    <div class="flex gap-12 mt-24" style="margin-bottom: 40px;">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save"></i> {{ 'حفظ التعديلات' if is_edit else 'إضافة الوردية' }}
+        </button>
+        <a href="{{ url_for('shifts_list') }}" class="btn btn-outline btn-lg">إلغاء</a>
+    </div>
+</form>
+{% endblock %}

@@ -72,8 +72,9 @@
 <table id="dataTable">
                 <thead>
                     <tr>
-                        <th>الموظف</th>
+<th>الموظف</th>
                         <th>القسم</th>
+                        <th>الوردية</th>
                         <th>الحضور</th>
                         <th>الانصراف</th>
                         <th>ساعات العمل</th>
@@ -94,7 +95,11 @@
                                 </div>
                             </div>
                         </td>
-                        <td>{{ r.employee.department.name if r.employee.department else '—' }}</td>
+<td>{{ r.employee.department.name if r.employee.department else '—' }}</td>
+                        <td>
+                            {% if r.employee.shift_id and r.employee.shift_obj %}<span class="badge badge-purple">{{ r.employee.shift_obj.name }}</span>
+                            {% else %}<span class="badge badge-gray">موحد</span>{% endif %}
+                        </td>
                         <td class="bold" style="color:var(--primary);">{{ r.check_in_time.strftime('%I:%M %p') if r.check_in_time else '—' }}</td>
                         <td class="bold" style="color:var(--danger);">{{ r.check_out_time.strftime('%I:%M %p') if r.check_out_time else '—' }}</td>
                         <td>{{ r.worked_hours if r.check_in_time and r.check_out_time else '—' }} {% if r.worked_hours %}ساعة{% endif %}</td>

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}نظام الورديات{% endblock %}
+{% block page_title %}نظام الورديات{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <a href="{{ url_for('shift_new') }}" class="btn btn-primary" style="margin-right:auto;">
+        <i class="fas fa-plus"></i> وردية جديدة
+    </a>
+</div>
+
+<div class="card mt-16">
+    <div class="card-header">
+        <h3><i class="fas fa-clock" style="color:var(--primary); margin-left:8px;"></i> الورديات ({{ shifts|length }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if shifts %}
+        <div class="table-wrap">
+            <input type="search" class="form-control table-search" placeholder="بحث سريع..." oninput="filterRows(this, 'dataTable')">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>الوردية</th>
+                        <th>المواعيد</th>
+                        <th>سماح التأخير</th>
+                        <th>مهلة الانصراف</th>
+                        <th>الموظفون</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in shifts %}
+                    <tr>
+                        <td class="bold">
+                            <i class="fas fa-moon" style="color:var(--purple); margin-left:8px;"></i> {{ s.name }}
+                            <div class="small muted">{{ s.description or '' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-primary">{{ s.hours_label }}</span>
+                        </td>
+                        <td>{{ s.late_tolerance }} دقيقة</td>
+                        <td>{{ s.grace_minutes_out }} دقيقة</td>
+                        <td><span class="badge badge-success">{{ s.employees.filter_by(status='active').count() }} موظف</span></td>
+                        <td>
+                            {% if s.is_active %}<span class="badge badge-success"><i class="fas fa-check-circle"></i> مفعّلة</span>
+                            {% else %}<span class="badge badge-secondary"><i class="fas fa-circle-xmark"></i> متوقفة</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="flex gap-8">
+                                <a href="{{ url_for('shift_edit', shift_id=s.id) }}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+                                <form method="POST" action="{{ url_for('shift_delete', shift_id=s.id) }}" onsubmit="return confirm('حذف وردية {{ s.name }}؟ سيعود الموظفون المرتبطون بها للنظام الموحد.')">
+                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-clock"></i><h4>لا توجد ورديات</h4><p>أضف وردية لتخصيص مواعيد العمل لفئات مختلفة من الموظفين.</p></div>
+        {% endif %}
+        <div class="card-footer muted small" style="padding: 14px 16px; border-top: 1px solid var(--border);">
+            <i class="fas fa-info-circle"></i> الموظف الذي لا يُحدَّد له وردية يعمل بالمواعيد الموحدة من الإعدادات (النظام الموحد).
+        </div>
+    </div>
+</div>
+{% endblock %}

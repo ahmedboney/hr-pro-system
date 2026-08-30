@@ -287,7 +287,7 @@ class FingerprintManager:
                         continue
 
                     # Record attendance
-                    punch_type = FingerprintManager._determine_punch_type(dt)
+                    punch_type = FingerprintManager._determine_punch_type(emp, dt)
                     result = FingerprintManager._record_punch(emp, dt, dev.id, punch_type)
                     
                     if result in ('check_in', 'check_out', 'updated'):
@@ -303,8 +303,26 @@ class FingerprintManager:
         return {'synced': synced, 'skipped': skipped, 'errors': errors}
 
     @staticmethod
-    def _determine_punch_type(dt):
+    def _shift_times(emp):
+        """إرجاع مواعيد (work_start, work_end, tolerance, grace_out) حسب وردية الموظف أو الموحدة."""
+        shift = None
+        if getattr(emp, 'shift_id', None):
+            from models import Shift as _Shift
+            shift = _Shift.query.get(emp.shift_id)
         work_start = Setting.get('work_start', '08:00')
+        work_end = Setting.get('work_end', '17:00')
+        tolerance = int(Setting.get('late_tolerance', '15'))
+        grace_out = 30
+        if shift:
+            work_start = shift.start_time.strftime('%H:%M')
+            work_end = shift.end_time.strftime('%H:%M')
+            tolerance = shift.late_tolerance
+            grace_out = shift.grace_minutes_out
+        return work_start, work_end, tolerance, grace_out
+
+    @staticmethod
+    def _determine_punch_type(emp, dt):
+        work_start, _e, _t, _g = FingerprintManager._shift_times(emp)
         try:
             start_h, start_m = map(int, work_start.split(':'))
         except:
@@ -321,9 +339,7 @@ class FingerprintManager:
             employee_id=emp.id, date=dt.date()
         ).first()
 
-        work_start = Setting.get('work_start', '08:00')
-        work_end = Setting.get('work_end', '17:00')
-        tolerance = int(Setting.get('late_tolerance', '15'))
+        work_start, work_end, tolerance, grace_out = FingerprintManager._shift_times(emp)
 
         if punch_type == 'check_in':
             if existing:
@@ -331,6 +347,8 @@ class FingerprintManager:
                 if not existing.check_in_time or dt.time() < existing.check_in_time:
                     existing.check_in_time = dt.time()
                     existing.device_id = device_id
+                    if emp.shift_id:
+                        existing.shift_id = emp.shift_id
                     db.session.commit()
                     return 'updated'
                 return 'skipped'
@@ -340,7 +358,8 @@ class FingerprintManager:
                     date=dt.date(),
                     check_in_time=dt.time(),
                     device_id=device_id,
-                    status='present'
+                    status='present',
+                    shift_id=emp.shift_id,
                 )
                 # Check if late
                 try:
@@ -362,15 +381,20 @@ class FingerprintManager:
                 if not existing.check_out_time:
                     existing.check_out_time = dt.time()
                     existing.device_id = device_id
+                    if emp.shift_id:
+                        existing.shift_id = emp.shift_id
                     
                     # Calculate overtime
                     try:
                         end_h, end_m = map(int, work_end.split(':'))
                         work_end_dt = datetime(dt.year, dt.month, dt.day, end_h, end_m)
                         ot_minutes = (dt - work_end_dt).total_seconds() / 60
-                        # Add 30 min grace for lunch/breaks
-                        if ot_minutes > 30:
-                            existing.overtime_hours = round((ot_minutes - 30) / 60, 2)
+                        # Add grace for lunch/breaks
+                        if ot_minutes > grace_out:
+                            existing.overtime_hours = round((ot_minutes - grace_out) / 60, 2)
+                        # Early leave
+                        if ot_minutes < 0 and dt.time() < datetime(dt.year, dt.month, dt.day, end_h, end_m).time():
+                            existing.early_leave_minutes = int(round(abs(ot_minutes)))
                     except:
                         pass
 

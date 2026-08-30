@@ -1,16 +1,73 @@
 import os
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from app import db, app
 from models import (
     User, Department, Position, Employee, LeaveType, DeductionType,
     BonusType, Setting, FingerprintDevice, AllowanceType, PayrollPeriod,
     LeaveBalance, Attendance, LeaveRequest, PayrollRecord, LoanPayment,
-    Bonus, Loan, OvertimeRequest
+    Bonus, Loan, OvertimeRequest, Shift
 )
+
+def _ensure_columns():
+    """تحديث الجداول الموجودة بأعمدة إضافية (SQLite لا يدعم ALTER ADD COLUMN IF NOT EXISTS بشكل موحد)."""
+    from sqlalchemy import inspect, text
+    bind = db.engine
+    insp = inspect(bind)
+    def add_col(table, col, ddl):
+        if table in insp.get_table_names() and col not in {c['name'] for c in insp.get_columns(table)}:
+            with bind.connect() as conn:
+                conn.execute(text(ddl))
+                conn.commit()
+            print(f"[+] Added column {table}.{col}")
+    add_col('employees', 'shift_id', "ALTER TABLE employees ADD COLUMN shift_id INTEGER")
+    add_col('attendance', 'shift_id', "ALTER TABLE attendance ADD COLUMN shift_id INTEGER")
 
 def create_database():
     db.create_all()
+    _ensure_columns()
     print("[+] Database tables created.")
+
+def seed_default_shifts():
+    """ورديات افتراضية (idempotent) — النظام الموحد يبقى هو الافتراضي لمن لا يخصّص وردية."""
+    if Shift.query.count() == 0:
+        defaults = [
+            ('صباحي', '08:00', '17:00', 15, 30, 'الوردية الصباحية العادية (الافتراضية)'),
+            ('مسائي', '14:00', '23:00', 15, 30, 'الوردية المسائية'),
+            ('ليلي', '23:00', '08:00', 15, 30, 'الوردية الليلية — تمرّ إلى اليوم التالي'),
+        ]
+        for name, s, e, tol, grace, desc in defaults:
+            db.session.add(Shift(
+                name=name,
+                start_time=datetime.strptime(s, '%H:%M').time(),
+                end_time=datetime.strptime(e, '%H:%M').time(),
+                late_tolerance=tol,
+                grace_minutes_out=grace,
+                description=desc,
+                is_active=True,
+            ))
+        db.session.commit()
+        print("[+] Default shifts created (صباحي/مسائي/ليلي)")
+
+
+class SeedShifts:
+    """توزيع الورديات على الموظفين التجريبيين لأغراض العرض"""
+    @staticmethod
+    def get_shift_for_employee(emp_id):
+        shift = Shift.query.filter(Shift.name.in_(['صباحي', 'مسائي', 'ليلي'])).first()
+        if not shift:
+            seed_default_shifts()
+            shift = Shift.query.first()
+        mapping = {
+            'EMP001': 'صباحي',
+            'EMP002': 'صباحي',
+            'EMP003': 'مسائي',
+            'EMP004': 'ليلي',
+        }
+        name = mapping.get(emp_id)
+        if not name:
+            return None
+        s = Shift.query.filter_by(name=name).first()
+        return s.id if s else None
 
 def seed_default_data():
     """أدخل البيانات الافتراضية (idempotent)"""
@@ -108,6 +165,9 @@ def seed_default_data():
         for d in deduction_types:
             db.session.add(DeductionType(**d))
         print("[+] Default deduction types created")
+
+    # Create default shifts (نظام الورديات)
+    seed_default_shifts()
 
     # Create bonus types
     if BonusType.query.count() == 0:
@@ -274,6 +334,7 @@ def seed_demo_data():
                 hire_date=date(today.year - 3, 3, 1), employment_type='full_time',
                 status='active', base_salary=base, housing_allowance=housing,
                 transport_allowance=transport, food_allowance=food, phone_allowance=100,
+                shift_id=SeedShifts.get_shift_for_employee(emp_id),
             )
             db.session.add(emp)
         db.session.commit()
@@ -394,6 +455,7 @@ def wipe_all_data():
         # 3) التصنيفات والإعدادات (التي سيعيدها الافتراضي لاحقاً)
         db.session.query(Department).delete()
         db.session.query(Position).delete()
+        db.session.query(Shift).delete()
         db.session.query(LeaveType).delete()
         db.session.query(DeductionType).delete()
         db.session.query(BonusType).delete()

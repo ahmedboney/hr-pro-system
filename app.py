@@ -18,7 +18,7 @@ from models import (
     db, User, Department, Position, Employee, FingerprintDevice, Attendance,
     LeaveType, LeaveRequest, LeaveBalance, DeductionType, BonusType, Bonus,
     PayrollPeriod, PayrollRecord, Loan, LoanPayment, Setting, OvertimeRequest,
-    AuditLog
+    AuditLog, Shift
 )
 from modules.fingerprint import FingerprintManager, SimulatorDevice
 from modules.payroll import PayrollCalculator
@@ -534,6 +534,7 @@ def employees_list():
 def employee_new():
     departments = Department.query.all()
     positions = Position.query.all()
+    shifts = Shift.query.filter_by(is_active=True).all()
     if request.method == 'POST':
         try:
             emp = Employee()
@@ -541,6 +542,7 @@ def employee_new():
             emp.fingerprint_id = request.form.get('fingerprint_id', '').strip() or None
             emp.first_name = request.form['first_name'].strip()
             emp.last_name = request.form['last_name'].strip()
+            emp.shift_id = int(request.form['shift_id']) if request.form.get('shift_id') else None
             emp.national_id = request.form.get('national_id', '').strip() or None
             emp.birth_date = parse_date(request.form.get('birth_date'))
             emp.gender = request.form.get('gender')
@@ -566,10 +568,10 @@ def employee_new():
             # Validate uniqueness
             if Employee.query.filter_by(emp_id=emp.emp_id).first():
                 flash('رقم الموظف موجود بالفعل', 'danger')
-                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=False)
+                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, shifts=shifts, is_edit=False)
             if emp.fingerprint_id and Employee.query.filter_by(fingerprint_id=emp.fingerprint_id).first():
                 flash('رقم البصمة موجود بالفعل', 'danger')
-                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=False)
+                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, shifts=shifts, is_edit=False)
 
             db.session.add(emp)
             db.session.flush()
@@ -595,7 +597,7 @@ def employee_new():
             db.session.rollback()
             flash(f"خطأ أثناء الحفظ: {str(e)}", 'danger')
 
-    return render_template('employees/form.html', employee=None, departments=departments, positions=positions, is_edit=False)
+    return render_template('employees/form.html', employee=None, departments=departments, positions=positions, shifts=shifts, is_edit=False)
 
 
 @app.route('/employees/<int:emp_id>')
@@ -635,12 +637,14 @@ def employee_edit(emp_id):
     emp = Employee.query.get_or_404(emp_id)
     departments = Department.query.all()
     positions = Position.query.all()
+    shifts = Shift.query.filter_by(is_active=True).all()
     if request.method == 'POST':
         try:
             emp.emp_id = request.form['emp_id'].strip()
             emp.fingerprint_id = request.form.get('fingerprint_id', '').strip() or None
             emp.first_name = request.form['first_name'].strip()
             emp.last_name = request.form['last_name'].strip()
+            emp.shift_id = int(request.form['shift_id']) if request.form.get('shift_id') else None
             emp.national_id = request.form.get('national_id', '').strip() or None
             emp.birth_date = parse_date(request.form.get('birth_date'))
             emp.gender = request.form.get('gender')
@@ -670,7 +674,7 @@ def employee_edit(emp_id):
             ).first()
             if dup:
                 flash('رقم الموظف مستخدم من قبل موظف آخر', 'danger')
-                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=True)
+                return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, shifts=shifts, is_edit=True)
             if emp.fingerprint_id:
                 dup_fp = Employee.query.filter(
                     Employee.fingerprint_id == emp.fingerprint_id,
@@ -678,7 +682,7 @@ def employee_edit(emp_id):
                 ).first()
                 if dup_fp:
                     flash('رقم البصمة مستخدم من قبل موظف آخر', 'danger')
-                    return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=True)
+                    return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, shifts=shifts, is_edit=True)
 
             db.session.commit()
             log_action('تعديل موظف', f"{emp.full_name} — {emp.emp_id}")
@@ -688,7 +692,7 @@ def employee_edit(emp_id):
             db.session.rollback()
             flash(f"خطأ أثناء الحفظ: {str(e)}", 'danger')
 
-    return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, is_edit=True)
+    return render_template('employees/form.html', employee=emp, departments=departments, positions=positions, shifts=shifts, is_edit=True)
 
 
 @app.route('/employees/<int:emp_id>/delete', methods=['POST'])
@@ -978,7 +982,7 @@ def attendance_import():
                         skipped += 1
                         continue
                 
-                punch_type = FingerprintManager._determine_punch_type(dt)
+                punch_type = FingerprintManager._determine_punch_type(emp, dt)
                 result = FingerprintManager._record_punch(emp, dt, None, punch_type)
                 if result != 'skipped':
                     synced += 1
@@ -1987,6 +1991,105 @@ def settings_regenerate_api_key():
     return redirect(url_for('settings_index'))
 
 
+# ==================== Shifts (نظام الورديات) ====================
+
+def _parse_shift_time(v, fallback='08:00'):
+    try:
+        return datetime.strptime(v, '%H:%M').time()
+    except Exception:
+        return datetime.strptime(fallback, '%H:%M').time()
+
+
+@app.route('/shifts')
+@login_required
+def shifts_list():
+    shifts = Shift.query.order_by(Shift.start_time).all()
+    return render_template('shifts/index.html', shifts=shifts)
+
+
+@app.route('/shifts/new', methods=['GET', 'POST'])
+@admin_required
+def shift_new():
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            if not name:
+                flash('اسم الوردية مطلوب', 'danger')
+                return redirect(url_for('shifts_list'))
+            if Shift.query.filter_by(name=name).first():
+                flash('يوجد وردية بهذا الاسم بالفعل', 'danger')
+                return redirect(url_for('shifts_list'))
+            shift = Shift(
+                name=name,
+                start_time=_parse_shift_time(request.form.get('start_time', '08:00')),
+                end_time=_parse_shift_time(request.form.get('end_time', '17:00')),
+                late_tolerance=int(request.form.get('late_tolerance', 15) or 15),
+                grace_minutes_out=int(request.form.get('grace_minutes_out', 30) or 30),
+                description=request.form.get('description', '').strip(),
+                is_active=True,
+            )
+            db.session.add(shift)
+            db.session.commit()
+            log_action('إضافة وردية', f"{name}")
+            flash(f"تمت إضافة وردية «{name}» بنجاح", 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f"خطأ أثناء الحفظ: {str(e)}", 'danger')
+        return redirect(url_for('shifts_list'))
+    return render_template('shifts/form.html', shift=None, is_edit=False)
+
+
+@app.route('/shifts/<int:shift_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def shift_edit(shift_id):
+    shift = Shift.query.get_or_404(shift_id)
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            if not name:
+                flash('اسم الوردية مطلوب', 'danger')
+                return redirect(url_for('shift_edit', shift_id=shift.id))
+            dup = Shift.query.filter(Shift.name == name, Shift.id != shift.id).first()
+            if dup:
+                flash('يوجد وردية بهذا الاسم بالفعل', 'danger')
+                return redirect(url_for('shift_edit', shift_id=shift.id))
+            shift.name = name
+            shift.start_time = _parse_shift_time(request.form.get('start_time', '08:00'))
+            shift.end_time = _parse_shift_time(request.form.get('end_time', '17:00'))
+            shift.late_tolerance = int(request.form.get('late_tolerance', 15) or 15)
+            shift.grace_minutes_out = int(request.form.get('grace_minutes_out', 30) or 30)
+            shift.description = request.form.get('description', '').strip()
+            shift.is_active = request.form.get('is_active') == 'on'
+            db.session.commit()
+            log_action('تعديل وردية', f"{shift.name}")
+            flash(f"تم تحديث وردية «{shift.name}» بنجاح", 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f"خطأ أثناء الحفظ: {str(e)}", 'danger')
+        return redirect(url_for('shifts_list'))
+    return render_template('shifts/form.html', shift=shift, is_edit=True)
+
+
+@app.route('/shifts/<int:shift_id>/delete', methods=['POST'])
+@admin_required
+def shift_delete(shift_id):
+    shift = Shift.query.get_or_404(shift_id)
+    name = shift.name
+    count = Employee.query.filter_by(shift_id=shift.id).count()
+    try:
+        # إلغاء تعيين الوردية من الموظفين والسجلات المرتبطة بها (يعودون للنظام الموحد)
+        Employee.query.filter_by(shift_id=shift.id).update({'shift_id': None})
+        Attendance.query.filter_by(shift_id=shift.id).update({'shift_id': None})
+        db.session.delete(shift)
+        db.session.commit()
+        log_action('حذف وردية', f"{name}")
+        flash(f"تم حذف وردية «{name}» — عاد الموظفون المرتبطون بها للنظام الموحد ({count})", 'info')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"تعذر الحذف (وردة مرتبطة بموظفين): {str(e)}", 'danger')
+    return redirect(url_for('shifts_list'))
+
+
 # ==================== API ====================
 
 @app.route('/api/attendance/today')
@@ -2051,7 +2154,7 @@ def api_fingerprint_punch():
     else:
         dt = datetime.now()
 
-    punch_type = FingerprintManager._determine_punch_type(dt)
+    punch_type = FingerprintManager._determine_punch_type(emp, dt)
     result = FingerprintManager._record_punch(emp, dt, device_id, punch_type)
 
     return jsonify({

@@ -112,6 +112,16 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>الوردية</label>
+                    <select name="shift_id" class="form-control">
+                        <option value="">— النظام الموحد —</option>
+                        {% for s in shifts %}
+                        <option value="{{ s.id }}" {% if employee and employee.shift_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.hours_label }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="muted">اختياري — إن تركتها فارغة يعمل بالمواعيد الموحدة.</small>
+                </div>
+                <div class="form-group">
                     <label>تاريخ التعيين</label>
                     <input type="date" name="hire_date" class="form-control" value="{{ fmt_date(employee.hire_date) if employee else '' }}">
                 </div>

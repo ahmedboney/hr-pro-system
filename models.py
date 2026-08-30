@@ -48,12 +48,36 @@ class Position(db.Model):
     employees = db.relationship('Employee', backref='position', lazy='dynamic')
 
 
+class Shift(db.Model):
+    """نظام الورديات — مواعيد عمل بديلة عن المواعيد الموحدة"""
+    __tablename__ = 'shifts'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    start_time = db.Column(db.Time, nullable=False, default=lambda: datetime.strptime('08:00', '%H:%M').time())
+    end_time = db.Column(db.Time, nullable=False, default=lambda: datetime.strptime('17:00', '%H:%M').time())
+    late_tolerance = db.Column(db.Integer, default=15)
+    grace_minutes_out = db.Column(db.Integer, default=30)
+    description = db.Column(db.String(200))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    employees = db.relationship('Employee', back_populates='shift_obj', lazy='dynamic', foreign_keys='Employee.shift_id')
+    attendances = db.relationship('Attendance', back_populates='shift_obj', lazy='dynamic', foreign_keys='Attendance.shift_id')
+
+    @property
+    def hours_label(self):
+        return f"{self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')}"
+
+
 class Employee(db.Model):
     """الموظفين"""
     __tablename__ = 'employees'
     id = db.Column(db.Integer, primary_key=True)
     emp_id = db.Column(db.String(20), unique=True, nullable=False)
     fingerprint_id = db.Column(db.String(30), unique=True, nullable=True)
+    shift_id = db.Column(db.Integer, db.ForeignKey('shifts.id'))
+
+    shift_obj = db.relationship('Shift', back_populates='employees', foreign_keys=[shift_id])
     
     # Personal Info
     first_name = db.Column(db.String(50), nullable=False)
@@ -143,7 +167,10 @@ class Attendance(db.Model):
     status = db.Column(db.String(20), default='present')  # present, absent, late, leave, holiday
     late_minutes = db.Column(db.Integer, default=0)
     early_leave_minutes = db.Column(db.Integer, default=0)
+    shift_id = db.Column(db.Integer, db.ForeignKey('shifts.id'))
     device_id = db.Column(db.Integer, db.ForeignKey('fingerprint_devices.id'))
+
+    shift_obj = db.relationship('Shift', back_populates='attendances', foreign_keys=[shift_id])
     notes = db.Column(db.String(200))
 
     employee = db.relationship('Employee', backref='all_attendance')
