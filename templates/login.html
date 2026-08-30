@@ -142,16 +142,10 @@
             <code>demo</code> / <code>demo1234</code>
             <br>بيانات المعاينة تُعاد ضبطها تلقائياً كل يوم.
         </div>
-        {% else %}
-        <div class="demo-box" style="background:#eff6ff; border-color:#3b82f6; color:#1e3a8a;">
-            <b>حسابات افتراضية محلية:</b>
-            <code>admin</code> / <code>admin123</code> (مدير) و <code>hr</code> / <code>hr123</code> — يمكن تغييرها من قسم المستخدمين.
-        </div>
         {% endif %}
 
         <div class="footer">
-            نظام مجاني لوجه الله &#183; حقوق الملكية محفوظة
-            <a href="{{ url_for('guide') }}">دليل الاستخدام</a>
+            نظام مجاني لوجه الله &#183; حقوق الملكية محفوظة &copy; {{ today.year }} &#183; محاسب / أحمد عبدالله
         </div>
     </div>
 
