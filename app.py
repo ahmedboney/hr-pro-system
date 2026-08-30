@@ -884,29 +884,57 @@ def attendance_manual():
 
     existing = Attendance.query.filter_by(employee_id=emp.id, date=att_date).first()
 
+    # تحديث تصنيف الوردية عند التسجيل اليدوي (نفس الوردية الحالية للموظف)
+    if emp.shift_id:
+        if existing:
+            existing.shift_id = emp.shift_id
+        attach_shift = emp.shift_id
+    else:
+        attach_shift = None
+
+    # حساب التأخير حسب وردية الموظف عند تسجيل الحضور يدوياً
     if action == 'check_in':
+        new_late = 0
+        new_status = 'present'
+        try:
+            ws, we, tol, g = FingerprintManager._shift_times(emp)
+            sh, sm = map(int, ws.split(':'))
+            start_dt = datetime(att_date.year, att_date.month, att_date.day, sh, sm)
+            late_min = (datetime.combine(att_date, t) - start_dt).total_seconds() / 60
+            if late_min > tol:
+                new_status = 'late'
+                new_late = int(round(late_min))
+        except Exception:
+            pass
+
         if not existing:
             existing = Attendance(
                 employee_id=emp.id,
                 date=att_date,
                 check_in_time=t,
-                status='present'
+                status=new_status,
+                late_minutes=new_late,
+                shift_id=attach_shift,
             )
             db.session.add(existing)
         else:
             existing.check_in_time = t
-            existing.status = 'present'
+            existing.status = new_status
+            existing.late_minutes = new_late
+            existing.shift_id = attach_shift
     elif action == 'check_out':
         if not existing:
             existing = Attendance(
                 employee_id=emp.id,
                 date=att_date,
                 check_out_time=t,
-                status='present'
+                status='present',
+                shift_id=attach_shift,
             )
             db.session.add(existing)
         else:
             existing.check_out_time = t
+            existing.shift_id = attach_shift
 
     db.session.commit()
     flash(f"تم تسجيل {action} للموظف {emp.full_name}", 'success')
@@ -917,10 +945,27 @@ def attendance_manual():
 @login_required
 def attendance_update(att_id):
     att = Attendance.query.get_or_404(att_id)
+    emp = att.employee
     att.status = request.form.get('status', att.status)
     att.notes = request.form.get('notes', '')
+
+    # تحديث تصنيف الوردية لكل تعديل يدوي (يتبع الوردية الحالية للموظف)
+    if emp and emp.shift_id:
+        att.shift_id = emp.shift_id
+
     if request.form.get('check_in'):
         att.check_in_time = datetime.strptime(request.form['check_in'], '%H:%M').time()
+        # إعادة احتساب التأخير حسب وردية الموظف
+        try:
+            ws, _we, tol, _g = FingerprintManager._shift_times(emp)
+            sh, sm = map(int, ws.split(':'))
+            start_dt = datetime(att.date.year, att.date.month, att.date.day, sh, sm)
+            late_min = (datetime.combine(att.date, att.check_in_time) - start_dt).total_seconds() / 60
+            att.late_minutes = int(round(late_min)) if late_min > tol else 0
+            if late_min > tol:
+                att.status = 'late'
+        except Exception:
+            pass
     if request.form.get('check_out'):
         att.check_out_time = datetime.strptime(request.form['check_out'], '%H:%M').time()
     db.session.commit()
@@ -1148,6 +1193,26 @@ def export_attendance_pdf():
     summary = ReportGenerator.monthly_attendance_summary(month, year)
     data = pdf_export.pdf_attendance(month, year, summary)
     return send_pdf(data, f"تقرير_الحضور_{year}_{month:02d}.pdf")
+
+
+@app.route('/export/pdf/shifts-attendance')
+@login_required
+def export_shift_attendance_pdf():
+    """تقرير الحضور الشهري مصنفاً حسب الورديات PDF"""
+    month = request.args.get('month', date.today().month, type=int)
+    year = request.args.get('year', date.today().year, type=int)
+    if not (1 <= month <= 12):
+        month = date.today().month
+    data = pdf_export.pdf_shift_attendance(month, year)
+    return send_pdf(data, f"تقرير_الورديات_{year}_{month:02d}.pdf")
+
+
+@app.route('/export/pdf/shifts-schedule')
+@login_required
+def export_shift_schedule_pdf():
+    """جدول توزيع الموظفين على الورديات PDF"""
+    data = pdf_export.pdf_shift_schedule()
+    return send_pdf(data, "جدول_الورديات.pdf")
 
 
 @app.route('/export/pdf/monthly')
@@ -1450,6 +1515,20 @@ def leave_request():
         start = parse_date(request.form.get('start_date'))
         end = parse_date(request.form.get('end_date'))
         reason = request.form.get('reason', '')
+        hours_raw = request.form.get('hours', '').strip()
+        hours = None
+        if hours_raw:
+            try:
+                hours = float(hours_raw)
+            except (TypeError, ValueError):
+                hours = None
+
+        # إجازة جزئية بساعات: اليوم الواحد = 8 ساعات قياسية
+        if hours is not None:
+            if hours <= 0 or hours > 16:
+                hours = None
+            else:
+                end = start  # الإجازة الجزئية ليوم واحد فقط
 
         if not start or not end:
             flash('تاريخ البداية والنهاية مطلوب', 'danger')
@@ -1458,7 +1537,10 @@ def leave_request():
         else:
             # Check balance
             from calendar import monthrange
-            days = (end - start).days + 1
+            if hours is not None:
+                days = round(hours / 8.0, 2)
+            else:
+                days = (end - start).days + 1
             leave_type = LeaveType.query.get(leave_type_id)
             emp = Employee.query.get(emp_id)
             
@@ -1479,6 +1561,7 @@ def leave_request():
                 leave_type_id=leave_type_id,
                 start_date=start,
                 end_date=end,
+                hours=hours,
                 reason=reason,
                 status='pending'
             )
@@ -1510,9 +1593,9 @@ def leave_action(req_id):
             year=req.start_date.year
         ).first()
         if balance:
-            days = req.days_count
-            balance.used_days = min(balance.entitled_days, balance.used_days + days)
-            balance.remaining_days = max(0, balance.entitled_days - balance.used_days)
+            days = req.leave_days
+            balance.used_days = min(balance.entitled_days, round(balance.used_days + days, 2))
+            balance.remaining_days = max(0, round(balance.entitled_days - balance.used_days, 2))
         flash('تمت الموافقة على الإجازة', 'success')
     elif action == 'reject':
         req.status = 'rejected'
@@ -1616,7 +1699,7 @@ def payroll_record_update(period_id, record_id):
     record.gross_salary = round(
         record.base_salary + record.housing_allowance + record.transport_allowance +
         record.food_allowance + record.phone_allowance + record.other_allowances +
-        record.overtime_amount + record.bonus_amount, 2
+        record.shift_allowance + record.overtime_amount + record.bonus_amount, 2
     )
     record.total_deductions = round(
         record.absent_deduction + record.late_deduction + record.social_insurance +
@@ -2004,7 +2087,8 @@ def _parse_shift_time(v, fallback='08:00'):
 @login_required
 def shifts_list():
     shifts = Shift.query.order_by(Shift.start_time).all()
-    return render_template('shifts/index.html', shifts=shifts)
+    employees = Employee.query.filter_by(status='active').order_by(Employee.emp_id).all()
+    return render_template('shifts/index.html', shifts=shifts, employees=employees, today=date.today())
 
 
 @app.route('/shifts/new', methods=['GET', 'POST'])
@@ -2025,6 +2109,7 @@ def shift_new():
                 end_time=_parse_shift_time(request.form.get('end_time', '17:00')),
                 late_tolerance=int(request.form.get('late_tolerance', 15) or 15),
                 grace_minutes_out=int(request.form.get('grace_minutes_out', 30) or 30),
+                allowance_percent=float(request.form.get('allowance_percent', 0) or 0),
                 description=request.form.get('description', '').strip(),
                 is_active=True,
             )
@@ -2058,6 +2143,7 @@ def shift_edit(shift_id):
             shift.end_time = _parse_shift_time(request.form.get('end_time', '17:00'))
             shift.late_tolerance = int(request.form.get('late_tolerance', 15) or 15)
             shift.grace_minutes_out = int(request.form.get('grace_minutes_out', 30) or 30)
+            shift.allowance_percent = float(request.form.get('allowance_percent', 0) or 0)
             shift.description = request.form.get('description', '').strip()
             shift.is_active = request.form.get('is_active') == 'on'
             db.session.commit()
@@ -2068,6 +2154,41 @@ def shift_edit(shift_id):
             flash(f"خطأ أثناء الحفظ: {str(e)}", 'danger')
         return redirect(url_for('shifts_list'))
     return render_template('shifts/form.html', shift=shift, is_edit=True)
+
+
+@app.route('/shifts/<int:shift_id>/assign', methods=['POST'])
+@admin_required
+def shift_bulk_assign(shift_id):
+    """تعيين وردية لعدد كبير من الموظفين دفعة واحدة"""
+    shift = Shift.query.get_or_404(shift_id)
+    emp_ids = []
+    for v in request.form.getlist('employee_ids'):
+        try:
+            emp_ids.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    cleared_any = request.form.get('clear_checked') == 'on'
+    updated = 0
+    try:
+        if cleared_any:
+            # إزالة الوردية من المحددين (يعودون للنظام الموحد)
+            db.session.query(Employee).filter(
+                Employee.id.in_(emp_ids), Employee.shift_id == shift.id
+            ).update({'shift_id': None}, synchronize_session=False)
+            updated += len(emp_ids)
+            log_action('إلغاء تعيين وردية جماعي', f"{shift.name} — {len(emp_ids)} موظف")
+            flash(f"تم عودة {len(emp_ids)} موظف إلى النظام الموحد وإلغاء وردية «{shift.name}»", 'info')
+        else:
+            db.session.query(Employee).filter(Employee.id.in_(emp_ids)).update(
+                {'shift_id': shift.id}, synchronize_session=False)
+            updated += len(emp_ids)
+            log_action('تعيين وردية جماعي', f"{shift.name} — {len(emp_ids)} موظف")
+            flash(f"تم تعيين وردية «{shift.name}» لـ {len(emp_ids)} موظف", 'success')
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"خطأ أثناء التعيين: {str(e)}", 'danger')
+    return redirect(url_for('shifts_list'))
 
 
 @app.route('/shifts/<int:shift_id>/delete', methods=['POST'])

@@ -8,6 +8,12 @@
     <a href="{{ url_for('shift_new') }}" class="btn btn-primary" style="margin-right:auto;">
         <i class="fas fa-plus"></i> وردية جديدة
     </a>
+    <a href="{{ url_for('export_shift_schedule_pdf') }}" class="btn btn-outline" target="_blank">
+        <i class="fas fa-print" style="color:var(--primary);"></i> جدول الورديات
+    </a>
+    <a href="{{ url_for('export_shift_attendance_pdf', month=today.month, year=today.year) }}" class="btn btn-outline" target="_blank">
+        <i class="fas fa-file-pdf" style="color:var(--danger);"></i> تقرير شهر {{ today.month }} بالورديات
+    </a>
 </div>
 
 <div class="card mt-16">
@@ -25,6 +31,7 @@
                         <th>المواعيد</th>
                         <th>سماح التأخير</th>
                         <th>مهلة الانصراف</th>
+                        <th>بدل الوردية</th>
                         <th>الموظفون</th>
                         <th>الحالة</th>
                         <th>إجراءات</th>
@@ -42,6 +49,7 @@
                         </td>
                         <td>{{ s.late_tolerance }} دقيقة</td>
                         <td>{{ s.grace_minutes_out }} دقيقة</td>
+                        <td>{% if s.allowance_percent %}<span class="badge badge-success">{{ s.allowance_percent }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
                         <td><span class="badge badge-success">{{ s.employees.filter_by(status='active').count() }} موظف</span></td>
                         <td>
                             {% if s.is_active %}<span class="badge badge-success"><i class="fas fa-check-circle"></i> مفعّلة</span>
@@ -50,6 +58,7 @@
                         <td>
                             <div class="flex gap-8">
                                 <a href="{{ url_for('shift_edit', shift_id=s.id) }}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
+                                <button type="button" class="btn btn-sm btn-outline" onclick="openModal('assign-modal-{{ s.id }}')" title="تعيين جماعي"><i class="fas fa-users-gear"></i></button>
                                 <form method="POST" action="{{ url_for('shift_delete', shift_id=s.id) }}" onsubmit="return confirm('حذف وردية {{ s.name }}؟ سيعود الموظفون المرتبطون بها للنظام الموحد.')">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
@@ -68,4 +77,45 @@
         </div>
     </div>
 </div>
+
+{% for s in shifts %}
+<div class="modal-overlay" id="assign-modal-{{ s.id }}">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h3><i class="fas fa-users-gear"></i> تعيين وردية «{{ s.name }}» جماعياً</h3>
+            <button class="modal-close" onclick="closeModal('assign-modal-{{ s.id }}')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('shift_bulk_assign', shift_id=s.id) }}">
+            <p class="muted mb-16" style="font-size:13px;">حدد الموظفين ثم احفظ. المحدَّدون حالياً بهذه الوردية مُعلَّمون مسبقاً — قم بإلغاء أي منهم لإخراجه منها.</p>
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+                    <input type="checkbox" id="bulk-all-{{ s.id }}" onchange="document.querySelectorAll('#list-{{ s.id }} input[name=employee_ids]').forEach(x => x.checked = this.checked);"> تحديد الكل
+                </label>
+                <button type="button" class="btn btn-sm btn-outline" onclick="document.querySelectorAll('#list-{{ s.id }} input[name=employee_ids]').forEach(x => x.checked = !x.checked);">عكس التحديد</button>
+                <label class="flex gap-6" style="font-size:13px; color: var(--danger);">
+                    <input type="checkbox" name="clear_checked" value="on"> إخراج المحددين من هذه الوردية (للعودة للنظام الموحد)
+                </label>
+            </div>
+            <div id="list-{{ s.id }}" style="max-height: 320px; overflow-y: auto; border:1px solid var(--border); border-radius:8px; padding:8px;">
+                {% for emp in employees %}
+                {% set in_shift = emp.shift_id == s.id %}
+                <label style="display:flex; align-items:center; gap:10px; padding:7px; border-radius:6px; cursor:pointer; {% if in_shift %}background:var(--success-bg){% endif %}">
+                    <input type="checkbox" name="employee_ids" value="{{ emp.id }}" {% if in_shift %}checked{% endif %}>
+                    <div style="width:26px; height:26px; border-radius:50%; background:{{ '#10b981' if in_shift else '#64748b' }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px;">{{ emp.first_name[0] }}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:600;">{{ emp.full_name }}</div>
+                        <div style="font-size:11px; color:var(--text-3);">{{ emp.emp_id }} — {{ emp.department.name if emp.department else 'بدون قسم' }}{% if in_shift %} (الآن على هذه الوردية){% endif %}</div>
+                    </div>
+                    {% if in_shift %}<span class="badge badge-success">الحالية</span>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+            <div class="flex gap-8 mt-16">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التعيين</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('assign-modal-{{ s.id }}')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

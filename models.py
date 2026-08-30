@@ -57,6 +57,7 @@ class Shift(db.Model):
     end_time = db.Column(db.Time, nullable=False, default=lambda: datetime.strptime('17:00', '%H:%M').time())
     late_tolerance = db.Column(db.Integer, default=15)
     grace_minutes_out = db.Column(db.Integer, default=30)
+    allowance_percent = db.Column(db.Float, default=0, nullable=False)
     description = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -210,6 +211,7 @@ class LeaveRequest(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, cancelled
+    hours = db.Column(db.Float, nullable=True)  # إجازة جزئية بالساعات (يوم العمل القياسي = 8 ساعات)
     reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     reviewed_at = db.Column(db.DateTime)
     review_notes = db.Column(db.Text)
@@ -221,6 +223,18 @@ class LeaveRequest(db.Model):
     @property
     def days_count(self):
         return (self.end_date - self.start_date).days + 1
+
+    @property
+    def leave_days(self):
+        """قيمة الإجازة بأيام العمل القياسية: يوم = 8 ساعات بغض النظر عن مدة الوردية.
+        إن حُدّدت ساعات جزئية تُحسب كأجزاء يوم، وإلا فتُحسب الأيام التقويمية كاملة."""
+        if self.hours:
+            return round(float(self.hours) / 8.0, 2)
+        return self.days_count
+
+    @property
+    def is_partial(self):
+        return bool(self.hours)
 
 
 class LeaveBalance(db.Model):
@@ -284,6 +298,7 @@ class PayrollRecord(db.Model):
     food_allowance = db.Column(db.Float, default=0)
     phone_allowance = db.Column(db.Float, default=0)
     other_allowances = db.Column(db.Float, default=0)
+    shift_allowance = db.Column(db.Float, default=0)
     overtime_amount = db.Column(db.Float, default=0)
     bonus_amount = db.Column(db.Float, default=0)
     

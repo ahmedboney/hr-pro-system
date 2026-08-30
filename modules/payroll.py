@@ -152,6 +152,18 @@ class PayrollCalculator:
         ).all()
         bonus_amount = round(sum(float(b.amount) for b in bonuses), 2)
 
+        # Shift allowance (نسبة بدل الوردية الليلية/المميزة من إجمالي الراتب)
+        shift_allowance = 0.0
+        shift_name = None
+        if employee.shift_id:
+            from models import Shift as _Shift
+            _s = _Shift.query.get(employee.shift_id)
+            if _s and _s.allowance_percent:
+                shift_allowance = round(employee.total_salary * float(_s.allowance_percent) / 100.0, 2)
+                shift_name = _s.name
+        if not shift_allowance:
+            shift_allowance = round(float(Setting.get('night_shift_allowance_pct', 0) or 0) * employee.total_salary / 100.0, 2)
+
         # Loans
         loan_deduction = round(PayrollCalculator.calc_loan_deduction(employee.id, period), 2)
 
@@ -161,8 +173,8 @@ class PayrollCalculator:
         # Tax (simple flat calculation - can be customized)
         tax_amount = 0
 
-        # Gross salary
-        gross = employee.total_salary + bonus_amount
+        # Gross salary (يشمل بدل الوردية الليلية)
+        gross = round(employee.total_salary + shift_allowance + bonus_amount, 2)
 
         # Total deductions
         total_deductions = round(
@@ -187,6 +199,7 @@ class PayrollCalculator:
         record.food_allowance = float(employee.food_allowance)
         record.phone_allowance = float(employee.phone_allowance)
         record.other_allowances = float(employee.other_allowances)
+        record.shift_allowance = shift_allowance
         record.overtime_amount = overtime_amount
         record.bonus_amount = bonus_amount
         record.absent_days = attendance['absent_days']

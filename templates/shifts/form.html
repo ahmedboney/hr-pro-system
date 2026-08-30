@@ -39,6 +39,11 @@
                     <label>مهلة الانصراف (دقيقة قبل احتساب إضافي)</label>
                     <input type="number" name="grace_minutes_out" class="form-control" value="{{ shift.grace_minutes_out if shift else 30 }}" min="0">
                 </div>
+                <div class="form-group">
+                    <label>بدل الوردية (%)</label>
+                    <input type="number" name="allowance_percent" class="form-control" value="{{ '%.2f'|format(shift.allowance_percent) if shift and shift.allowance_percent else 0 }}" min="0" step="0.5">
+                    <small class="muted">نسبة تُضاف لإجمالي راتب موظف هذه الوردية شهرياً (مثال: 15% للوردية الليلية)</small>
+                </div>
                 <div class="form-group" style="grid-column: span 2;">
                     <label>وصف مختصر</label>
                     <input type="text" name="description" class="form-control" value="{{ shift.description if shift else '' }}" placeholder="مثال: الوردية الليلية تمرّ إلى اليوم التالي">

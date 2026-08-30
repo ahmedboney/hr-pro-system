@@ -21,6 +21,9 @@ def _ensure_columns():
             print(f"[+] Added column {table}.{col}")
     add_col('employees', 'shift_id', "ALTER TABLE employees ADD COLUMN shift_id INTEGER")
     add_col('attendance', 'shift_id', "ALTER TABLE attendance ADD COLUMN shift_id INTEGER")
+    add_col('shifts', 'allowance_percent', "ALTER TABLE shifts ADD COLUMN allowance_percent FLOAT DEFAULT 0")
+    add_col('payroll_records', 'shift_allowance', "ALTER TABLE payroll_records ADD COLUMN shift_allowance FLOAT DEFAULT 0")
+    add_col('leave_requests', 'hours', "ALTER TABLE leave_requests ADD COLUMN hours FLOAT")
 
 def create_database():
     db.create_all()

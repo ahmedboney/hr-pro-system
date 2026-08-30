@@ -54,6 +54,7 @@
                     <tr><td>بدل الوجبات</td><td class="text-left bold">{{ fmt_money(record.food_allowance) }}</td></tr>
                     <tr><td>بدل الهاتف</td><td class="text-left bold">{{ fmt_money(record.phone_allowance) }}</td></tr>
                     {% if record.other_allowances %}<tr><td>بدلات أخرى</td><td class="text-left bold">{{ fmt_money(record.other_allowances) }}</td></tr>{% endif %}
+                    <tr><td>بدل الوردية</td><td class="text-left bold">{{ fmt_money(record.shift_allowance) }}</td></tr>
                     <tr><td>العمل الإضافي</td><td class="text-left bold">{{ fmt_money(record.overtime_amount) }}</td></tr>
                     <tr><td>المكافآت والحوافز</td><td class="text-left bold">{{ fmt_money(record.bonus_amount) }}</td></tr>
                     <tr style="background: var(--success-bg);">

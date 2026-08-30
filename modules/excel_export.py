@@ -323,7 +323,7 @@ def export_payroll(period, records):
     exporter = ExcelExporter(subtitle="نظام الموارد البشرية المتكامل - كشف رواتب")
     wb = exporter.finalize()
 
-    headers = ["رقم الموظف", "الاسم", "الراتب الأساسي", "البدلات",
+    headers = ["رقم الموظف", "الاسم", "الراتب الأساسي", "البدلات", "بدل الوردية",
                "إضافي ومكافآت", "الإجمالي", "خصومات", "أقساط السلف",
                "صافي الراتب", "الدفع"]
     rows = []
@@ -340,20 +340,21 @@ def export_payroll(period, records):
             pay_status = "غير مدفوع"
         rows.append([
             emp.emp_id, emp.full_name,
-            round(rec.base_salary, 2), allowances, bonuses,
+            round(rec.base_salary, 2), allowances, round(rec.shift_allowance or 0, 2), bonuses,
             round(rec.gross_salary, 2), round(rec.total_deductions - rec.loan_deduction, 2),
             round(rec.loan_deduction, 2), round(rec.net_salary, 2), pay_status,
         ])
 
-    money = {3, 4, 5, 6, 7, 8, 9}
+    money = {3, 4, 5, 6, 7, 8, 9, 10}
     t_basic = sum(r[2] for r in rows)
     t_allow = sum(r[3] for r in rows)
-    t_bonus = sum(r[4] for r in rows)
-    t_gross = sum(r[5] for r in rows)
-    t_ded = sum(r[6] for r in rows)
-    t_loan = sum(r[7] for r in rows)
-    t_net = sum(r[8] for r in rows)
-    total_row = ["", "الإجمالي", t_basic, t_allow, t_bonus, t_gross, t_ded, t_loan, t_net,
+    t_shift = sum(r[4] for r in rows)
+    t_bonus = sum(r[5] for r in rows)
+    t_gross = sum(r[6] for r in rows)
+    t_ded = sum(r[7] for r in rows)
+    t_loan = sum(r[8] for r in rows)
+    t_net = sum(r[9] for r in rows)
+    total_row = ["", "الإجمالي", t_basic, t_allow, t_shift, t_bonus, t_gross, t_ded, t_loan, t_net,
                  f"{len(records)} موظف"]
 
     ws = exporter.build_report(

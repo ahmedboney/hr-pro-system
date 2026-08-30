@@ -249,10 +249,12 @@ def pdf_payslip(record):
          ar("بدل وجبات"), f"{record.food_allowance:,.2f}"],
         [ar("بدل هاتف"), f"{record.phone_allowance:,.2f}",
          ar("بدلات أخرى"), f"{record.other_allowances:,.2f}"],
-        [ar("ساعات إضافية"), f"{record.overtime_amount:,.2f}",
-         ar("مكافآت"), f"{record.bonus_amount:,.2f}"],
-        [ar("إجمالي الاستحقاقات"), f"{record.gross_salary:,.2f}",
+        [ar("بدل الوردية"), f"{record.shift_allowance:,.2f}",
+         ar("ساعات إضافية"), f"{record.overtime_amount:,.2f}"],
+        [ar("مكافآت"), f"{record.bonus_amount:,.2f}",
          ar("العملة"), ar(currency)],
+        [ar("إجمالي الاستحقاقات"), f"{record.gross_salary:,.2f}",
+         ar("صافي المستحق"), f"{record.net_salary:,.2f}"],
     ]
     t = _table(earn, col_widths=[45 * mm, 36 * mm, 45 * mm, 36 * mm], aligns=[1, 2, 1, 2])
     t.setStyle(TableStyle([('BACKGROUND', (0, -1), (1, -1), COLOR_TOTAL),
@@ -329,7 +331,7 @@ def pdf_payroll(period, records):
 
     head = [
         [ar("م"), ar("رقم"), ar("الاسم"), ar("الأساسي"), ar("البدلات"),
-         ar("إضافي"), ar("الإجمالي"), ar("الخصومات"), ar("السلف"), ar("الصافي")],
+         ar("بدل وردية"), ar("إضافي"), ar("الإجمالي"), ar("الخصومات"), ar("السلف"), ar("الصافي")],
     ]
     rows = []
     for i, rec in enumerate(records, start=1):
@@ -340,7 +342,7 @@ def pdf_payroll(period, records):
         ded = round(rec.total_deductions - rec.loan_deduction, 2)
         rows.append([
             i, emp.emp_id, _tc(emp.full_name), f"{rec.base_salary:,.2f}",
-            f"{allow:,.2f}", f"{extra:,.2f}",
+            f"{allow:,.2f}", f"{rec.shift_allowance:,.2f}", f"{extra:,.2f}",
             f"{rec.gross_salary:,.2f}", f"{ded:,.2f}",
             f"{rec.loan_deduction:,.2f}", f"{rec.net_salary:,.2f}",
         ])
@@ -348,20 +350,21 @@ def pdf_payroll(period, records):
     def money_row(label, values):
         return [ar(label)] + [f"{v:,.2f}" for v in values]
 
-    rows.append(money_row("الإجمالي", [
+    rows.append(["", "", ar("الإجمالي")] + [f"{v:,.2f}" for v in [
         sum(r.base_salary for r in records),
         sum(round(r.housing_allowance + r.transport_allowance + r.food_allowance +
                   r.phone_allowance + r.other_allowances, 2) for r in records),
+        sum(r.shift_allowance or 0 for r in records),
         sum(round(r.overtime_amount + r.bonus_amount, 2) for r in records),
         sum(r.gross_salary for r in records),
         sum(round(r.total_deductions - r.loan_deduction, 2) for r in records),
         sum(r.loan_deduction for r in records),
         sum(r.net_salary for r in records),
-    ]))
+    ]])
 
-    t = _table(head + rows, col_widths=[9 * mm, 15 * mm, 35 * mm, 16 * mm, 16 * mm,
-                                         15 * mm, 18 * mm, 18 * mm, 16 * mm, 20 * mm],
-               aligns=[1, 1, 1, 2, 2, 2, 2, 2, 2, 2], split_by_row=True)
+    t = _table(head + rows, col_widths=[8 * mm, 14 * mm, 34 * mm, 15 * mm, 15 * mm,
+                                        15 * mm, 14 * mm, 17 * mm, 17 * mm, 15 * mm, 18 * mm],
+               aligns=[1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2], split_by_row=True)
     t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
                            ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                            ('FONTSIZE', (0, 0), (-1, -1), 7.5)]))
@@ -418,6 +421,161 @@ def pdf_attendance(month, year, summary):
                            ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                            ('FONTSIZE', (0, 0), (-1, -1), 8)]))
     elements.append(t)
+
+    doc = _base_doc(buf)
+    doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),
+              onLaterPages=lambda c, d: _footer(c, d, company))
+    return buf.getvalue()
+
+
+# ==================== تقرير الحضور حسب الوردية PDF ====================
+
+def pdf_shift_attendance(month, year):
+    """تقرير حضوري شهري مصنّفاً حسب كل وردية (feature2)"""
+    from models import (Employee, Attendance, Shift)
+    buf = BytesIO()
+    company, currency = _init_common("شركتي", "تقرير الورديات")
+    month_name = MONTHS_AR[month - 1] if 1 <= month <= 12 else str(month)
+
+    start = date(year, month, 1)
+    end = date(year, month, _days_in_month(year, month))
+
+    shifts = Shift.query.order_by(Shift.start_time).all()
+    # القسم الأول: موظفو النظام الموحد (بدون وردية)
+    def stat_for(emp):
+        records = Attendance.query.filter(
+            Attendance.employee_id == emp.id,
+            Attendance.date >= start,
+            Attendance.date <= end
+        ).all()
+        present = late = absent_est = 0
+        ot = 0.0
+        for r in records:
+            if r.status == 'late':
+                late += 1
+                present += 1
+            elif r.status == 'present':
+                present += 1
+            ot += r.overtime_hours or 0
+        working_days = sum(1 for d in range(1, end.day + 1)
+                           if date(year, month, d).weekday() < 5)
+        return present, late, max(0, working_days - present), round(ot, 2)
+
+    elements = []
+    elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
+    elements.append(Paragraph(ar(f"تقرير الحضور والانصراف حسب الورديات - شهر {month_name} {year}"),
+                              _style('t2', 13.5, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
+    elements.append(Spacer(1, 6))
+
+    all_records = Employee.query.filter_by(status='active').order_by(Employee.emp_id).all()
+    # موظفو النظام الموحد أولاً
+    unified = [e for e in all_records if not e.shift_id]
+    # ثم كل وردية
+    per_shift = {s.id: [] for s in shifts}
+    for e in all_records:
+        if e.shift_id and e.shift_id in per_shift:
+            per_shift[e.shift_id].append(e)
+
+    def section(title, emp_list, badge_shift=None):
+        if not emp_list:
+            return
+        elements.append(Paragraph(ar(title), _style('h1', 11, True, COLOR_HEADER)))
+        if badge_shift is not None:
+            elements.append(Paragraph(
+                f'<font color="#475569">{ar("مواعيد هذه الوردية:")}</font> &nbsp;{badge_shift.hours_label}',
+                _style('n', 9)))
+        head = [[ar("م"), ar("رقم الموظف"), ar("الاسم"), ar("القسم"),
+                 ar("حضور"), ar("تأخير"), ar("غياب"), ar("ساعات إضافية")]]
+        rows = []
+        for i, emp in enumerate(emp_list, start=1):
+            p, l, a, ot = stat_for(emp)
+            rows.append([i, emp.emp_id, _tc(emp.full_name),
+                         _tc(emp.department.name if emp.department else '—'),
+                         p, l, a, ot])
+        rows.append([ar("الإجمالي"), "", "", "",
+                     sum(r[4] for r in rows), sum(r[5] for r in rows),
+                     sum(r[6] for r in rows), round(sum(r[7] for r in rows), 2)])
+        t = _table(head + rows, col_widths=[9 * mm, 18 * mm, 40 * mm, 30 * mm,
+                                             14 * mm, 14 * mm, 14 * mm, 22 * mm],
+                   aligns=[1, 1, 1, 1, 2, 2, 2, 2], split_by_row=True)
+        t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
+                               ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
+                               ('FONTSIZE', (0, 0), (-1, -1), 8)]))
+        elements.append(t)
+        elements.append(Spacer(1, 8))
+
+    section(ar("النظام الموحد"), unified)
+    for s in shifts:
+        section(ar(f"وردية: {s.name}"), per_shift[s.id], badge_shift=s)
+
+    doc = _base_doc(buf)
+    doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),
+              onLaterPages=lambda c, d: _footer(c, d, company))
+    return buf.getvalue()
+
+
+# ==================== جدول توزيع الورديات PDF ====================
+
+def pdf_shift_schedule():
+    """طباعة جدول يوضح توزيع الموظفين على الورديات (feature6)"""
+    from models import (Employee, Shift, Setting)
+    buf = BytesIO()
+    company, currency = _init_common("شركتي", "جدول الورديات")
+
+    shifts = Shift.query.order_by(Shift.start_time).all()
+    unified_emps = Employee.query.filter(
+        Employee.status == 'active', Employee.shift_id.is_(None)
+    ).order_by(Employee.emp_id).all()
+
+    elements = []
+    elements.append(Paragraph(ar(company), _style('t1', 18, True, COLOR_HEADER, 1)))
+    elements.extend(_ornament_block(_GOLD))
+    elements.append(Paragraph(ar("جدول توزيع الموظفين على الورديات"),
+                              _style('t2', 14, True, colors.HexColor('#1E40AF'), 1)))
+    elements.extend(_ornament_block(COLOR_HEADER))
+    elements.append(Paragraph(ar(f"تاريخ الإصدار: {ar_date(date.today())}"),
+                              _style('n', 9, color=colors.HexColor('#475569'), align=1)))
+    elements.append(Spacer(1, 8))
+
+    def emp_table(title, emp_list, hours=None):
+        if not emp_list:
+            return
+        elements.append(Paragraph(ar(title), _style('h1', 11, True, COLOR_HEADER)))
+        if hours:
+            elements.append(Paragraph(
+                f'<font color="#475569">{ar("مواعيد هذه الوردية:")}</font> &nbsp;{hours}',
+                _style('n', 9)))
+        head = [[ar("م"), ar("رقم الموظف"), ar("الاسم"), ar("القسم"),
+                 ar("الوظيفة"), ar("مواعيد الوردية")]]
+        rows = []
+        for i, emp in enumerate(emp_list, start=1):
+            s = emp.shift_obj if emp.shift_obj else None
+            hours = s.hours_label if s else (Setting.get('work_start', '08:00') + ' - ' + Setting.get('work_end', '17:00'))
+            rows.append([i, emp.emp_id, _tc(emp.full_name),
+                         _tc(emp.department.name if emp.department else '—'),
+                         _tc(emp.position.title if emp.position else '—'),
+                         _tc(hours)])
+        t = _table(head + rows, col_widths=[8 * mm, 18 * mm, 40 * mm, 30 * mm,
+                                            32 * mm, 33 * mm],
+                   aligns=[1, 1, 1, 1, 1, 2], split_by_row=True)
+        t.setStyle(TableStyle([('FONTSIZE', (0, 0), (-1, -1), 8)]))
+        elements.append(t)
+        elements.append(Spacer(1, 8))
+
+    if unified_emps:
+        emp_table(ar("النظام الموحد (بدون وردية)"), unified_emps)
+    for s in shifts:
+        rows2 = s.employees.filter_by(status='active').order_by(Employee.emp_id).all()
+        if not rows2:
+            continue
+        emp_table(ar(f"وردية {s.name}"), rows2, hours=s.hours_label)
+
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        ar("ملاحظة: «النظام الموحد» يعني مواعيد العمل الافتراضية من إعدادات النظام، متاحة لكل وردية لا تُحدَّد لموظف معين."),
+        _style('n', 8, color=colors.HexColor('#475569'), align=1)))
 
     doc = _base_doc(buf)
     doc.build(elements, onFirstPage=lambda c, d: _footer(c, d, company),
@@ -571,7 +729,7 @@ def pdf_monthly_report(month, year):
     # --- كشف الرواتب ---
     if records:
         elements.append(Paragraph(ar("ثانياً: كشف الرواتب"), _style('h1', 11, True, COLOR_HEADER)))
-        head = [[ar("م"), ar("الاسم"), ar("الأساسي"), ar("الإجمالي"), ar("الخصومات"), ar("السلف"), ar("الصافي")]]
+        head = [[ar("م"), ar("الاسم"), ar("الأساسي"), ar("بدل وردية"), ar("الإجمالي"), ar("الخصومات"), ar("السلف"), ar("الصافي")]]
         rows = []
         for i, rec in enumerate(records, start=1):
             emp = rec.employee
@@ -579,17 +737,19 @@ def pdf_monthly_report(month, year):
                           rec.food_allowance + rec.phone_allowance + rec.other_allowances, 2)
             rows.append([
                 i, _tc(emp.full_name if emp else '—'), f"{rec.base_salary:,.2f}",
+                f"{rec.shift_allowance or 0:,.2f}",
                 f"{rec.gross_salary:,.2f}",
                 f"{round(rec.total_deductions - rec.loan_deduction, 2):,.2f}",
                 f"{rec.loan_deduction:,.2f}", f"{rec.net_salary:,.2f}",
             ])
         rows.append([
             ar("الإجمالي"), "", f"{sum(r.base_salary for r in records):,.2f}",
+            f"{sum(r.shift_allowance or 0 for r in records):,.2f}",
             f"{gross:,.2f}", f"{round(deduct - sum(r.loan_deduction for r in records), 2):,.2f}",
             f"{sum(r.loan_deduction for r in records):,.2f}", f"{net:,.2f}",
         ])
-        t = _table(head + rows, col_widths=[8 * mm, 36 * mm, 18 * mm, 20 * mm, 20 * mm, 16 * mm, 22 * mm],
-                   aligns=[1, 1, 2, 2, 2, 2, 2], split_by_row=True)
+        t = _table(head + rows, col_widths=[8 * mm, 34 * mm, 17 * mm, 17 * mm, 19 * mm, 19 * mm, 16 * mm, 20 * mm],
+                   aligns=[1, 1, 2, 2, 2, 2, 2, 2], split_by_row=True)
         t.setStyle(TableStyle([('BACKGROUND', (0, -1), (-1, -1), COLOR_TOTAL),
                                ('FONTNAME', (0, -1), (-1, -1), 'ArBd'),
                                ('FONTSIZE', (0, 0), (-1, -1), 8)]))
@@ -679,7 +839,7 @@ def pdf_leave_certificate(leave):
         Spacer(1, 8),
         Paragraph(ar(
             f"قد مُنح إجازة {leave.leave_type.name} اعتباراً من {ar_date(leave.start_date)} "
-            f"وحتى {ar_date(leave.end_date)} لمدة {leave.days_count} يوم"
+            f"وحتى {ar_date(leave.end_date)} لمدة {leave.leave_days} يوم"
         ), _style('b2', 12, True, align=1)),
         Spacer(1, 6),
         Paragraph(ar(
@@ -696,11 +856,14 @@ def pdf_leave_certificate(leave):
         ar(f"الرقم الوظيفي: {emp.emp_id} - القسم: {emp.department.name if emp.department else '—'} - الوظيفة: {emp.position.title if emp.position else '—'}"),
         _style('b1', 10, align=1)
     )], [Paragraph(
-        ar(f"قد مُنح إجازة {leave.leave_type.name} اعتباراً من {ar_date(leave.start_date)} وحتى {ar_date(leave.end_date)} لمدة {leave.days_count} يوم"),
+        ar(f"قد مُنح إجازة {leave.leave_type.name} اعتباراً من {ar_date(leave.start_date)} وحتى {ar_date(leave.end_date)} لمدة {leave.leave_days} يوم"),
         _style('b2', 12, True, align=1)
     )], [Paragraph(
         ar(f"وذلك بناءً على طلب الموظف المقدم بتاريخ {ar_date(leave.created_at.date() if leave.created_at else leave.start_date)} وتُحتسب ضمن رصيد إجازاته المستحقة."),
         _style('b3', 10, align=1)
+    )], [Paragraph(
+        ar("يُحتسب يوم الإجازة الواحد بمقدار 8 ساعات عمل قياسية بغض النظر عن مدة وردية الموظف."),
+        _style('b3', 9, color=colors.HexColor('#64748B'), align=1)
     )]], colWidths=[150 * mm])
     body_table.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 0.8, colors.HexColor('#1E3A8A')),
