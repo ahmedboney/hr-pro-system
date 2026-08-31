@@ -590,6 +590,8 @@ def employee_new():
                     ))
 
             db.session.commit()
+            from init_db import mark_system_configured
+            mark_system_configured()
             log_action('إضافة موظف', f"{emp.full_name} — {emp.emp_id}")
             flash(f"تم إضافة الموظف {emp.full_name} بنجاح", 'success')
             return redirect(url_for('employee_view', emp_id=emp.id))
@@ -2057,8 +2059,11 @@ def profile():
 @admin_required
 def settings_index():
     if request.method == 'POST':
+        from init_db import mark_system_configured
         for key in request.form:
             Setting.set(key, request.form[key])
+        # بمجرد حفظ الإعدادات يعتبر النظام مُعداً — توقف البذور التجريبية عن إعادة التعيين
+        mark_system_configured()
         flash('تم حفظ الإعدادات بنجاح', 'success')
         return redirect(url_for('settings_index'))
     return render_template('settings/index.html')

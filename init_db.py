@@ -309,12 +309,40 @@ def add_sample_employee():
 
 
 # بيانات تجريبية غنية لوضع الديمو (تُظهر على الاستضافة العامة فقط)
+def _has_real_employees():
+    """تحقق: هل يوجد موظفون حقيقيون (ليسوا تجريبيين فقط EMP001-EMP004)"""
+    real = Employee.query.filter(
+        ~Employee.emp_id.in_(['EMP001', 'EMP002', 'EMP003', 'EMP004'])
+    ).count()
+    return real > 0
+
+
+def _is_system_configured():
+    """تحقق: هل تم تكوين النظام فعلاً (تغيير إعدادات أو إضافة موظفين حقيقيين)"""
+    if Setting.get('system_configured') == '1':
+        return True
+    if _has_real_employees():
+        return True
+    company = Setting.get('company_name')
+    if company and company != 'شركتي المتميزة':
+        return True
+    return False
+
+
+def mark_system_configured():
+    """علّم النظام كمُعد — يمنع إعادة ضبط البيانات التجريبية"""
+    Setting.set('system_configured', '1')
+
+
 def seed_demo_data():
     """أدخل بيانات تجريبية واقعية حتى يرى الزائر النظام بكامل قوته"""
     from config import Config
     if not getattr(Config, 'DEMO_MODE', False):
         return
     try:
+        # لا نعيد بذر البيانات التجريبية إذا كان النظام مُعداً فعلاً بالبيانات الحقيقية
+        if _is_system_configured():
+            return
         if Setting.get('demo_data') == 'off':
             return
         if Setting.get('demo_seeded') == date.today().isoformat():
@@ -414,6 +442,10 @@ def reset_demo_data():
     if not getattr(Config, 'DEMO_MODE', False):
         return
     try:
+        # لا نعيد ضبط البيانات إذا كان النظام مُعداً فعلاً — لا نفقد بيانات المستخدم
+        if _is_system_configured():
+            print("[demo reset] تم إرجاؤه: النظام مُعدٌ ببيانات حقيقية")
+            return
         db.session.query(Attendance).delete()
         db.session.query(LeaveRequest).delete()
         db.session.query(LeaveBalance).delete()

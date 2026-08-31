@@ -29,6 +29,7 @@ class PayrollCalculator:
         
         absent_days = 0
         late_minutes = 0
+        late_days = 0
         # official_holidays = 0
 
         # Get all attendance records in period
@@ -50,6 +51,7 @@ class PayrollCalculator:
                 rec = next(r for r in records if r.date == day)
                 if rec.status == 'late':
                     late_minutes += rec.late_minutes or 0
+                    late_days += 1
                 # Skip if on approved paid leave handled elsewhere
             elif not is_holiday and not PayrollCalculator._is_on_approved_leave(employee_id, day, period):
                 absent_days += 1
@@ -98,6 +100,7 @@ class PayrollCalculator:
         return {
             'absent_days': absent_days,
             'late_minutes': late_minutes,
+            'late_days': late_days,
             'unpaid_leave_days': unpaid_leave_days,
             'overtime_hours': ot_hours,
             'attendance_days': len(attendance_dates),
@@ -144,13 +147,33 @@ class PayrollCalculator:
         unpaid_leave_deduction = round(attendance['unpaid_leave_days'] * daily_rate, 2)
         overtime_amount = round(attendance['overtime_hours'] * hourly_rate * 1.5, 2)
 
+        # العقوبة/المكافأة التلقائية بناءً على سجل الحضور
+        # (تُحسب قبل استخدام auto_bonus في bonus_amount و auto_penalty في الخصومات)
+        auto_penalty = 0.0
+        auto_bonus = 0.0
+        if str(Setting.get('auto_penalty_enabled', '')).strip() == 'on':
+            try:
+                threshold = int(Setting.get('auto_penalty_late_days', 3) or 3)
+                per_penalty = float(Setting.get('auto_penalty_amount', 0) or 0)
+                if threshold > 0 and per_penalty > 0 and attendance['late_days'] >= threshold:
+                    auto_penalty = round(per_penalty, 2)
+            except (ValueError, TypeError):
+                pass
+        if str(Setting.get('auto_bonus_enabled', '')).strip() == 'on':
+            try:
+                per_bonus = float(Setting.get('auto_bonus_amount', 0) or 0)
+                if per_bonus > 0 and attendance['absent_days'] == 0 and attendance['late_days'] == 0 and attendance['attendance_days'] > 0:
+                    auto_bonus = round(per_bonus, 2)
+            except (ValueError, TypeError):
+                pass
+
         # Bonuses
         bonuses = Bonus.query.filter(
             Bonus.employee_id == employee.id,
             Bonus.date >= period.start_date,
             Bonus.date <= (period.end_date or date.today())
         ).all()
-        bonus_amount = round(sum(float(b.amount) for b in bonuses), 2)
+        bonus_amount = round(sum(float(b.amount) for b in bonuses) + auto_bonus, 2)
 
         # Shift allowance (نسبة بدل الوردية الليلية/المميزة من إجمالي الراتب)
         shift_allowance = 0.0
@@ -179,7 +202,7 @@ class PayrollCalculator:
         # Total deductions
         total_deductions = round(
             absent_deduction + late_deduction + unpaid_leave_deduction +
-            social_insurance + tax_amount + loan_deduction, 2
+            social_insurance + tax_amount + loan_deduction + auto_penalty, 2
         )
 
         # Net
@@ -211,6 +234,9 @@ class PayrollCalculator:
         record.loan_deduction = loan_deduction
         record.unpaid_leave_days = attendance['unpaid_leave_days']
         record.unpaid_leave_deduction = unpaid_leave_deduction
+        # العقوبة التلقائية تُضاف لخصومات أخرى (تُعاد حسابها تلقائياً عند كل احتساب)
+        if auto_penalty > 0:
+            record.other_deductions = round(auto_penalty, 2)
         record.gross_salary = gross
         record.total_deductions = total_deductions
         record.net_salary = net_salary

@@ -121,6 +121,52 @@
 
     <div class="card mt-24">
         <div class="card-header">
+            <h3><i class="fas fa-robot" style="color:var(--danger); margin-left:8px;"></i>عقوبات ومكافآت تلقائية</h3>
+        </div>
+        <div class="card-body">
+            <p class="form-help" style="margin-bottom: 14px;">
+                <i class="fas fa-wand-magic-sparkles"></i> يتم تطبيق هذه القواعد تلقائياً عند احتساب الرواتب الشهرية.
+                العقوبة تُخصم من الراتب والمكافأة تُضاف إليه.
+            </p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>تفعيل العقوبة التلقائية (تأخير)</label>
+                    <select name="auto_penalty_enabled" class="form-control">
+                        <option value="off" {% if setting('auto_penalty_enabled') != 'on' %}selected{% endif %}>مغلق</option>
+                        <option value="on" {% if setting('auto_penalty_enabled') == 'on' %}selected{% endif %}>مفعّل</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>عدد مرات التأخير المسموح شهرياً (قبل تطبيق العقوبة)</label>
+                    <input type="number" name="auto_penalty_late_days" class="form-control"
+                           value="{{ setting('auto_penalty_late_days') or '3' }}" min="1">
+                </div>
+                <div class="form-group">
+                    <label>قيمة العقوبة (ج.م) لكل مرة تتجاوز الحد</label>
+                    <input type="number" name="auto_penalty_amount" step="0.01" class="form-control"
+                           value="{{ setting('auto_penalty_amount') or '50' }}" min="0">
+                </div>
+            </div>
+            <hr style="margin: 16px 0; border-color: var(--border);">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>تفعيل مكافأة الحضور المثالي</label>
+                    <select name="auto_bonus_enabled" class="form-control">
+                        <option value="off" {% if setting('auto_bonus_enabled') != 'on' %}selected{% endif %}>مغلق</option>
+                        <option value="on" {% if setting('auto_bonus_enabled') == 'on' %}selected{% endif %}>مفعّل</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>قيمة مكافأة الحضور بدون أي غياب أو تأخير (ج.م)</label>
+                    <input type="number" name="auto_bonus_amount" step="0.01" class="form-control"
+                           value="{{ setting('auto_bonus_amount') or '200' }}" min="0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
             <h3><i class="fas fa-signature" style="color:var(--purple); margin-left:8px;"></i>التوقيعات والأسماء</h3>
         </div>
         <div class="card-body">
