@@ -190,6 +190,17 @@ def csrf_token():
 
 
 @app.before_request
+def ensure_csrf_token():
+    """يضمن وجود رمز CSRF في الجلسة منذ البداية (قبل أي نموذج).
+    بدون هذا، إذا نُسخ رمز من صفحة قبل أن يُحفظ في الجلسة،
+    تفشل كل عمليات الحفظ (الإعدادات، الموظفون، الإجازات، ...)."""
+    if '_csrf_token' not in session:
+        from secrets import token_hex
+        session['_csrf_token'] = token_hex(16)
+    return None
+
+
+@app.before_request
 def verify_csrf():
     if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
         if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
