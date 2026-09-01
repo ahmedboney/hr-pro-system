@@ -10,6 +10,7 @@
     </div>
     <div class="card-body">
         <form method="GET" action="{{ url_for('insurance_report') }}" class="filter-bar">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="filter-item">
                 <label for="period_id">فترة الرواتب</label>
                 <select name="period_id" id="period_id" onchange="this.form.submit()">

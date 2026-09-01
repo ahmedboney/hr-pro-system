@@ -6,6 +6,7 @@
 {% block content %}
 <div class="filter-bar">
     <form method="GET" class="flex gap-8" style="flex:1; flex-wrap:wrap; align-items:center;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <i class="fas fa-search" style="color:var(--text-3);"></i>
             <input type="text" name="q" class="form-control" placeholder="بحث برقم الموظف، الاسم، رقم البصمة..." value="{{ q }}" style="min-width: 260px;">

@@ -5,6 +5,7 @@
 
 {% block content %}
 <form method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="card">
         <div class="card-header">
             <h3><i class="fas fa-building" style="color:var(--primary); margin-left:8px;"></i>بيانات الشركة</h3>
@@ -210,7 +211,8 @@
                        onclick="this.select(); navigator.clipboard && navigator.clipboard.writeText(this.value); flash('تم نسخ المفتاح', 'success');">
                 <button type="button" class="btn btn-outline" onclick="var f=document.getElementById('api-key-field'); f.select(); navigator.clipboard && navigator.clipboard.writeText(f.value);"><i class="fas fa-copy"></i> نسخ</button>
                 <button type="button" class="btn btn-warning" onclick="if(confirm('تجديد المفتاح يلغي المفاتيح القديمة فوراً. متابعة؟')){ document.getElementById('regenerate-key-form').submit(); }"><i class="fas fa-rotate"></i> تجديد</button>
-                <form id="regenerate-key-form" method="POST" action="{{ url_for('settings_regenerate_api_key') }}" style="display:none;"></form>
+                <form id="regenerate-key-form" method="POST" action="{{ url_for('settings_regenerate_api_key') }}" style="display:none;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"></form>
             </div>
             <div class="info-box mt-16" style="border-right:3px solid var(--success); padding:12px 14px; background:var(--bg-2); border-radius:8px;">
                 <div class="form-help" style="margin:0;">

@@ -60,6 +60,7 @@
                                 <a href="{{ url_for('shift_edit', shift_id=s.id) }}" class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></a>
                                 <button type="button" class="btn btn-sm btn-outline" onclick="openModal('assign-modal-{{ s.id }}')" title="تعيين جماعي"><i class="fas fa-users-gear"></i></button>
                                 <form method="POST" action="{{ url_for('shift_delete', shift_id=s.id) }}" onsubmit="return confirm('حذف وردية {{ s.name }}؟ سيعود الموظفون المرتبطون بها للنظام الموحد.')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
                             </div>
@@ -86,6 +87,7 @@
             <button class="modal-close" onclick="closeModal('assign-modal-{{ s.id }}')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('shift_bulk_assign', shift_id=s.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <p class="muted mb-16" style="font-size:13px;">حدد الموظفين ثم احفظ. المحدَّدون حالياً بهذه الوردية مُعلَّمون مسبقاً — قم بإلغاء أي منهم لإخراجه منها.</p>
             <div style="display:flex; gap:16px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
                 <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">

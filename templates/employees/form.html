@@ -5,6 +5,7 @@
 
 {% block content %}
 <form method="POST" action="{{ url_for('employee_edit', emp_id=employee.id) if is_edit else url_for('employee_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="card">
         <div class="card-header">
             <h3><i class="fas fa-id-card" style="color:var(--primary); margin-left:8px;"></i>البيانات الأساسية</h3>

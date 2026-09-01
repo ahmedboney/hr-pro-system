@@ -13,6 +13,7 @@
 </div>
 
 <form method="POST" class="card">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="card-body">
         <div class="form-grid">
             <div class="form-group">

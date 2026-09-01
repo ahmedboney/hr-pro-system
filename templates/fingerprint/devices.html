@@ -53,6 +53,7 @@
                 <a href="{{ url_for('fingerprint_sync', device_id=device.id) }}" class="btn btn-sm btn-primary" title="مزامنة البيانات"><i class="fas fa-sync-alt"></i> مزامنة</a>
                 <button class="btn btn-sm btn-outline" onclick="openModal('edit-device-{{ device.id }}')" title="تعديل"><i class="fas fa-edit"></i></button>
                 <form method="POST" action="{{ url_for('fingerprint_delete', device_id=device.id) }}" onsubmit="return confirm('حذف الجهاز {{ device.name }}؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-danger" title="حذف"><i class="fas fa-trash"></i></button>
                 </form>
             </div>
@@ -94,6 +95,7 @@
                 <button class="modal-close" onclick="closeModal('edit-device-{{ device.id }}')">&times;</button>
             </div>
             <form method="POST" action="{{ url_for('fingerprint_edit', device_id=device.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
                     <div class="form-group">
                         <label>اسم الجهاز</label>
@@ -158,6 +160,7 @@
             <button class="modal-close" onclick="closeModal('device-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('fingerprint_add') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>اسم الجهاز <span class="required">*</span></label>

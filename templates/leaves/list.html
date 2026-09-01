@@ -6,6 +6,7 @@
 {% block content %}
 <div class="filter-bar">
     <form method="GET" class="flex gap-8" style="align-items:center;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <select name="status" class="form-control" onchange="this.form.submit()">
             <option value="">كل الحالات</option>
             <option value="pending" {% if status == 'pending' %}selected{% endif %}>معلقة</option>
@@ -77,10 +78,12 @@
                             {% if req.status == 'pending' %}
                             <div class="flex gap-8">
                                 <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="action" value="approve">
                                     <button type="submit" class="btn btn-sm btn-success" title="موافقة"><i class="fas fa-check"></i></button>
                                 </form>
                                 <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="action" value="reject">
                                     <button type="submit" class="btn btn-sm btn-danger" title="رفض"><i class="fas fa-times"></i></button>
                                 </form>
@@ -93,6 +96,7 @@
                                         <button class="modal-close" onclick="closeModal('review-{{ req.id }}')">&times;</button>
                                     </div>
                                     <form method="POST" action="{{ url_for('leave_action', req_id=req.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                         <div class="form-group">
                                             <label>القرار</label>
                                             <select name="action" class="form-control">

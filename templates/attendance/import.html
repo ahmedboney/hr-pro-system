@@ -19,6 +19,7 @@
         </div>
 
         <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>نوع التنسيق</label>

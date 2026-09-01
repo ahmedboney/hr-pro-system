@@ -81,6 +81,7 @@
                                 {% if loan.status == 'active' %}
                                 <button class="btn btn-sm btn-success" onclick="openModal('pay-{{ loan.id }}')" title="سداد دفعة"><i class="fas fa-hand-holding-dollar"></i></button>
                                 <form method="POST" action="{{ url_for('loan_action', loan_id=loan.id) }}" onsubmit="return confirm('إلغاء هذه السلفة؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="action" value="cancel">
                                     <button type="submit" class="btn btn-sm btn-danger" title="إلغاء"><i class="fas fa-ban"></i></button>
                                 </form>
@@ -95,6 +96,7 @@
                                         <button class="modal-close" onclick="closeModal('pay-{{ loan.id }}')">&times;</button>
                                     </div>
                                     <form method="POST" action="{{ url_for('loan_action', loan_id=loan.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="action" value="pay">
                                         <div class="salary-breakdown mb-16">
                                             <div class="salary-row"><span>المبلغ المتبقي</span><span class="bold text-danger">{{ fmt_money(loan.remaining_amount) }}</span></div>
@@ -135,6 +137,7 @@
             <button class="modal-close" onclick="closeModal('loan-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('loan_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>الموظف <span class="required">*</span></label>

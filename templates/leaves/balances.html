@@ -6,6 +6,7 @@
 {% block content %}
 <div class="filter-bar">
     <form method="GET" class="flex gap-8" style="align-items:center;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label class="bold small">السنة:</label>
         <select name="year" class="form-control" onchange="this.form.submit()">
             {% for y in range(2023, 2031) %}

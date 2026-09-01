@@ -122,6 +122,7 @@
                         موافقة
                     </a>
                     <form id="quick-approve-{{ req.id }}" method="POST" action="{{ url_for('leave_action', req_id=req.id) }}" style="display:none;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="approve">
                     </form>
                 </li>

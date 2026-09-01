@@ -48,11 +48,13 @@
                             <div class="flex gap-8">
                                 {% if u.id != current_user.id %}
                                 <form method="POST" action="{{ url_for('user_toggle', user_id=u.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm {{ 'btn-outline' if u.is_active else 'btn-success' }}">
                                         {{ 'تعطيل' if u.is_active else 'تفعيل' }}
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ url_for('user_delete', user_id=u.id) }}" onsubmit="return confirm('حذف المستخدم {{ u.username }}؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
                                 {% else %}
@@ -75,6 +77,7 @@
             <button class="modal-close" onclick="closeModal('user-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('user_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>اسم المستخدم <span class="required">*</span></label>

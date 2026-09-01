@@ -21,6 +21,7 @@
                     </p>
                 </div>
                 <form method="POST" action="{{ url_for('backup_create') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <div class="form-row" style="gap:10px;">
                         <input type="text" name="notes" class="form-control" placeholder="ملاحظة اختيارية (مثال: قبل تعديل الرواتب)" style="flex:1;">
                         <button type="submit" class="btn btn-primary">
@@ -51,6 +52,7 @@
                         <i class="fas fa-download"></i> تحميل
                     </a>
                     <form method="POST" action="{{ url_for('backup_restore', filename=last_backup.filename) }}" onsubmit="return confirm('سيتم استبدال قاعدة البيانات الحالية بهذه النسخة. هل أنت متأكد؟')" style="display:inline;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-sm btn-warning">
                             <i class="fas fa-rotate-left"></i> استعادة هذه النسخة
                         </button>
@@ -101,11 +103,13 @@
                                     <i class="fas fa-download"></i>
                                 </a>
                                 <form method="POST" action="{{ url_for('backup_restore', filename=b.filename) }}" onsubmit="return confirm('سيتم استبدال قاعدة البيانات الحالية بهذه النسخة. هل أنت متأكد؟')" style="display:inline;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-warning" title="استعادة">
                                         <i class="fas fa-rotate-left"></i>
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ url_for('backup_delete', filename=b.filename) }}" onsubmit="return confirm('حذف هذه النسخة نهائياً؟')" style="display:inline;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>

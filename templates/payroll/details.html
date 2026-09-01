@@ -14,6 +14,7 @@
     <div class="actions">
         {% if period.status != 'closed' %}
         <form method="POST" action="{{ url_for('payroll_process', period_id=period.id) }}" style="display:inline;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-primary"><i class="fas fa-calculator"></i> احتساب الرواتب</button>
         </form>
         {% endif %}
@@ -54,6 +55,7 @@
         </div>
         <p class="muted mb-16" style="font-size:13px;">اختر الموظفين ليتم احتساب رواتبهم (الموظف النشط محدد افتراضياً):</p>
         <form method="POST" action="{{ url_for('payroll_process', period_id=period.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div style="max-height: 350px; overflow-y: auto; border:1px solid var(--border); border-radius:8px; padding:8px;">
                 {% for emp in employees %}
                 {% set has_rec = records|selectattr('employee_id', 'equalto', emp.id)|first %}
@@ -131,6 +133,7 @@
                                 <button class="modal-close" onclick="closeModal('edit-rec-{{ r.id }}')">&times;</button>
                             </div>
                             <form method="POST" action="{{ url_for('payroll_record_update', period_id=period.id, record_id=r.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <div class="grid grid-2">
                                     <div class="salary-breakdown" style="border-left: 1px solid var(--light-2); padding-left: 16px;">
                                         <h4 class="mb-8 text-primary bold" style="font-size:13px;"><i class="fas fa-arrow-down"></i> الإضافات</h4>
@@ -190,6 +193,7 @@
 <div class="card mt-24" style="border-right: 4px solid var(--success);">
     <div class="card-body">
         <form method="POST" action="{{ url_for('payroll_mark_paid', period_id=period.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="record_ids" value="{% for r in records if r.status != 'paid' %}{{ r.id }}{% if not loop.last %},{% endif %}{% endfor %}">
             <div class="flex-between">
                 <div>

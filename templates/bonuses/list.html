@@ -60,6 +60,7 @@
                         <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.reason or '—' }}</td>
                         <td>
                             <form method="POST" action="{{ url_for('bonus_delete', bonus_id=b.id) }}" onsubmit="return confirm('حذف هذه المكافأة؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                             </form>
                         </td>
@@ -82,6 +83,7 @@
             <button class="modal-close" onclick="closeModal('bonus-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('bonus_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>الموظف <span class="required">*</span></label>

@@ -35,6 +35,7 @@
                         <td><span class="badge badge-primary">{{ p.employees.filter_by(status='active').count() }} موظف</span></td>
                         <td>
                             <form method="POST" action="{{ url_for('position_delete', pos_id=p.id) }}" onsubmit="return confirm('حذف وظيفة {{ p.title }}؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                             </form>
                         </td>
@@ -56,6 +57,7 @@
             <button class="modal-close" onclick="closeModal('position-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('position_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label>المسمى الوظيفي <span class="required">*</span></label>
                 <input type="text" name="title" class="form-control" placeholder="مثال: محاسب أول" required>

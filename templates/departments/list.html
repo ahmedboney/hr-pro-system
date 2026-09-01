@@ -19,6 +19,7 @@
                 <span class="badge badge-primary">{{ dept.employees.filter_by(status='active').count() }} موظف</span>
                 <button class="btn btn-sm btn-outline" onclick="openModal('edit-dept-{{ dept.id }}')"><i class="fas fa-edit"></i></button>
                 <form method="POST" action="{{ url_for('department_delete', dept_id=dept.id) }}" onsubmit="return confirm('حذف قسم {{ dept.name }}؟')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                 </form>
             </div>
@@ -39,6 +40,7 @@
                 <button class="modal-close" onclick="closeModal('edit-dept-{{ dept.id }}')">&times;</button>
             </div>
             <form method="POST" action="{{ url_for('department_edit', dept_id=dept.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
                     <div class="form-group">
                         <label>اسم القسم</label>
@@ -75,6 +77,7 @@
             <button class="modal-close" onclick="closeModal('dept-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('department_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>اسم القسم <span class="required">*</span></label>

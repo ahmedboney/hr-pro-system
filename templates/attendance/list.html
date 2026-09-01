@@ -30,6 +30,7 @@
 <div class="filter-bar">
     <div class="form-group">
         <form method="GET" class="flex gap-8" style="align-items:center; flex-wrap:wrap;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <i class="fas fa-calendar-day" style="color:var(--text-3);"></i>
             <input type="date" name="date" class="form-control" value="{{ sel_date }}" onchange="this.form.submit()">
             <select name="dept" class="form-control" onchange="this.form.submit()">
@@ -53,6 +54,7 @@
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <form method="POST" action="{{ url_for('attendance_mark_absent') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-outline btn-sm" title="حساب الغياب تلقائياً (من لم يسجل ولم يسترح إجازة)">
                 <i class="fas fa-user-slash"></i> حساب الغياب
             </button>
@@ -124,6 +126,7 @@
                                 <button class="modal-close" onclick="closeModal('edit-modal-{{ r.id }}')">&times;</button>
                             </div>
                             <form method="POST" action="{{ url_for('attendance_update', att_id=r.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label>الحالة</label>
@@ -176,6 +179,7 @@
             <button class="modal-close" onclick="closeModal('manual-modal')">&times;</button>
         </div>
         <form method="POST" action="{{ url_for('attendance_manual') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-group">
                     <label>الموظف <span class="required">*</span></label>

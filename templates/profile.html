@@ -40,6 +40,7 @@
         </div>
         <div class="card-body">
             <form method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>كلمة المرور الحالية</label>
                     <input type="password" name="current_password" class="form-control" required>

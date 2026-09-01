@@ -16,6 +16,7 @@
             </div>
 
             <form method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="form-grid">
                     <div class="form-group">
                         <label>الموظف <span class="required">*</span></label>
