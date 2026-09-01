@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from flask import (
     Flask, render_template, request, redirect, url_for, flash,
-    jsonify, session, send_file, Response
+    jsonify, session, send_file, Response, make_response
 )
 from werkzeug.utils import secure_filename
 
@@ -33,6 +33,17 @@ from modules import scheduler
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+
+@app.after_request
+def no_cache(response):
+    """منع التخزين المؤقت للصفحات HTML حتى لا يرى المستخدم نسخاً قديمة معطوبة أبداً"""
+    if request.path.startswith('/static'):
+        return response
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 # ==================== Helper Functions ====================
